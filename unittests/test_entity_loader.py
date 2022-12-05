@@ -1,6 +1,6 @@
 from typing import Optional
 
-from bomf.loader import EntityLoader, EntityLoadingResult, _TargetEntity
+from bomf.loader.entityloader import EntityLoader, EntityLoadingResult
 
 
 class _ExampleEntity:
@@ -16,7 +16,7 @@ class TestEntityLoader:
                 self.loading_called: bool = False
                 self.polling_called: bool = False
 
-            def sanitize(self, entity: _TargetEntity) -> None:
+            def sanitize(self, entity: _ExampleEntity) -> None:
                 assert entity is not None
                 self.sanitize_called = True
 
@@ -45,13 +45,31 @@ class TestEntityLoader:
         assert result.verified_at >= result.loaded_at
         assert result.loading_error is None
 
-    async def test_all_overrides_are_called(self):
+    async def test_there_is_a_default_sanitize_step(self):
+        class _ExampleEntityLoaderWithOutSanitize(EntityLoader):
+            # no def sanitize()
+            async def verify(self, entity: _ExampleEntity, id_in_target_system: Optional[str] = None) -> bool:
+                return True
+
+            async def load_entity(self, entity: _ExampleEntity) -> Optional[EntityLoadingResult]:
+                return None
+
+        example_loader = _ExampleEntityLoaderWithOutSanitize()
+        result = await example_loader.load(_ExampleEntity())  # must not crash
+
+        assert result.was_loaded_successfully is True
+        assert result.loaded_at is not None
+        assert result.verified_at is not None
+        assert result.verified_at >= result.loaded_at
+        assert result.loading_error is None
+
+    async def test_all_overrides_are_called_on_error(self):
         class _ExampleEntityLoaderThatCrashesOnLoad(EntityLoader):
             def __init__(self):
                 self.sanitize_called: bool = False
                 self.loading_called: bool = False
 
-            def sanitize(self, entity: _TargetEntity) -> None:
+            def sanitize(self, entity: _ExampleEntity) -> None:
                 assert entity is not None
                 self.sanitize_called = True
 
