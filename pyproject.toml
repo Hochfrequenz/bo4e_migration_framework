@@ -8,10 +8,16 @@ profile = "black"
 [tool.pylint."MESSAGES CONTROL"]
 max-line-length = 120
 
+[tool.pytest.ini_options]
+# When the mode is auto, all discovered async tests are considered asyncio-driven
+# even if they have no @pytest.mark.asyncio marker.
+# https://github.com/pytest-dev/pytest-asyncio#auto-mode
+asyncio_mode = "auto"
+
 # the following lines are needed if you would like to build a python package
 # and you want to use semantic versioning
-# [build-system]
-# requires = ["setuptools>=41.0", "wheel", "setuptools_scm[toml]>=3.4"]
-# build-backend = "setuptools.build_meta"
+[build-system]
+requires = ["setuptools>=41.0", "wheel", "setuptools_scm[toml]>=3.4"]
+build-backend = "setuptools.build_meta"
 
-# [tool.setuptools_scm]
+[tool.setuptools_scm]
