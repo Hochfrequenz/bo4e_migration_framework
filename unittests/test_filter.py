@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-import pytest
+import pytest  # type:ignore[import]
 
 from bomf.filter import Filter
 
