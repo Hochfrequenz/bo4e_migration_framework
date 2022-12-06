@@ -33,3 +33,16 @@ class SourceToBo4eDataSetMapper(ABC, Generic[SourceDataModel, IntermediateDataSe
         """
         maps the given source data model into an intermediate data set
         """
+
+
+# pylint:disable=too-few-public-methods
+class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSet]):
+    """
+    A mapper that transforms data from the intermediate bo4e model to the target data model
+    """
+
+    @abstractmethod
+    def create_target_model(self, dataset: IntermediateDataSet) -> TargetDataModel:
+        """
+        maps the given source data model into an intermediate data set
+        """
