@@ -37,7 +37,9 @@ an arbitrary but fixed business object type
 
 class Bo4eDataSet(Protocol):
     """
-    A BO4E data set is a collection of Business Objects that relate to each other
+    A BO4E data set is a collection of Business Objects that relate to each other.
+    This class just defines methods that any bo4e data set should implement (via structural subtyping) without forcing
+    the data sets to inherit from a common base class.
     """
 
     def get_relations(self) -> Iterable[BusinessObjectRelation]:
