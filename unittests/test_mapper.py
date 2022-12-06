@@ -5,8 +5,8 @@ import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
 
-from bomf.mapper import Bo4eDataSetToTargetMapper, IntermediateDataSet, SourceDataModel, SourceToBo4eDataSetMapper
-from bomf.model import Bo4eDataSet, BusinessObjectRelation, SpecificBusinessObject
+from bomf.mapper import Bo4eDataSetToTargetMapper, SourceToBo4eDataSetMapper
+from bomf.model import Bo4eTyp, BusinessObjectRelation
 
 
 class _NotImplementedBo4eDataSetMixin:
@@ -17,9 +17,7 @@ class _NotImplementedBo4eDataSetMixin:
     def get_relations(self) -> Iterable[BusinessObjectRelation]:
         raise NotImplementedError("Not relevant for this test")
 
-    def get_business_object(
-        self, bo_type: Type[SpecificBusinessObject], specification: Optional[str] = None
-    ) -> SpecificBusinessObject:
+    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         raise NotImplementedError("Not relevant for this test")
 
 
@@ -28,9 +26,7 @@ class _ExampleDataSet(_NotImplementedBo4eDataSetMixin):
     malo: Marktlokation = attrs.field()
     melo: Messlokation = attrs.field()
 
-    def get_business_object(
-        self, bo_type: Type[SpecificBusinessObject], specification: Optional[str] = None
-    ) -> SpecificBusinessObject:
+    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         # pyling:disable=fixme
         # todo: find out how to allow the static type checker to not complain about the "dynamic" type
         if bo_type == Marktlokation:
