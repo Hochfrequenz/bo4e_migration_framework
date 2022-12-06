@@ -22,7 +22,7 @@ class _NotImplementedBo4eDataSetMixin:
 
 
 @attrs.define(kw_only=True, auto_attribs=True)
-class _ExampleDataSet(_NotImplementedBo4eDataSetMixin):
+class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
     malo: Marktlokation = attrs.field()
     melo: Messlokation = attrs.field()
 
@@ -36,16 +36,23 @@ class _ExampleDataSet(_NotImplementedBo4eDataSetMixin):
         raise NotImplementedError(f"The bo type {bo_type} is not implemented")
 
 
-class _DictToExampleDataSetMapper(SourceToBo4eDataSetMapper):
-    def create_data_set(self, source: Dict[str, str]) -> _ExampleDataSet:
-        return _ExampleDataSet(
+# in these tests we assume, that:
+# - the source data model is a dictionary
+# - the intermediate data model are BO4E MaLo and MeLo
+# - the target data model is a list of string
+# This is just to demonstrate the mapping structures.
+
+
+class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
+    def create_data_set(self, source: Dict[str, str]) -> _MaLoAndMeLo:
+        return _MaLoAndMeLo(
             melo=Messlokation.construct(messlokations_id=source["meloId"]),
             malo=Marktlokation.construct(marktlokations_id=source["maloId"]),
         )
 
 
-class _ExampleDataSetToListMapper(Bo4eDataSetToTargetMapper):
-    def create_target_model(self, dataset: _ExampleDataSet) -> List[str]:
+class _MaLoMeLoToListMapper(Bo4eDataSetToTargetMapper):
+    def create_target_model(self, dataset: _MaLoAndMeLo) -> List[str]:
         return [
             dataset.get_business_object(Marktlokation).marktlokations_id,
             dataset.get_business_object(Messlokation).messlokations_id,
@@ -54,17 +61,17 @@ class _ExampleDataSetToListMapper(Bo4eDataSetToTargetMapper):
 
 class TestMapper:
     def test_source_to_intermediate_mapper(self):
-        mapper = _DictToExampleDataSetMapper()
+        mapper = _DictToMaLoMeLoMapper()
         actual = mapper.create_data_set({"maloId": "54321012345", "meloId": "DE000111222333"})
-        assert actual == _ExampleDataSet(
+        assert actual == _MaLoAndMeLo(
             melo=Messlokation.construct(messlokations_id="DE000111222333"),
             malo=Marktlokation.construct(marktlokations_id="54321012345"),
         )
 
     def test_intermediate_to_target_mapper(self):
-        mapper = _ExampleDataSetToListMapper()
+        mapper = _MaLoMeLoToListMapper()
         actual = mapper.create_target_model(
-            _ExampleDataSet(
+            _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id="DE000111222333"),
                 malo=Marktlokation.construct(marktlokations_id="54321012345"),
             )
