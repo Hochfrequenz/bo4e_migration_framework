@@ -1,10 +1,24 @@
 """
 general data models for migrations
 """
-from typing import Any, Iterable, Optional, Protocol, Type, TypeVar
+import enum
+from typing import Generic, Iterable, Optional, Protocol, Type, TypeVar, Union
 
 import attrs
-import bo4e.bo.geschaeftsobjekt
+from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
+from bo4e.com.com import COM
+
+_SpecificBusinessObject = TypeVar("_SpecificBusinessObject", bound=Geschaeftsobjekt)
+"""
+an arbitrary but fixed business object type
+"""
+
+_SpecificCom = TypeVar("_SpecificCom", bound=COM)
+"""
+an arbitrary but fixed COM type
+"""
+
+Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]
 
 
 # pylint:disable=too-few-public-methods
@@ -19,25 +33,26 @@ class BusinessObjectRelation:
     necessary relation information.
     """
 
-    relation_type: str = attrs.field(validator=attrs.validators.instance_of(str))
+    relation_type: enum.Enum = attrs.field()
     """
-    the relation type describes how two business objects relate to each other
+    The relation type describes how two business objects relate to each other.
+    This is not (only) about cardinality. It's about being able to model different relations between objects.
+    Think about e.g. a business partner and an address: The relation could be:
+    - the address is the residential address of the business partner
+    - the address is the invoice address of the business partner
+    - the address is the place where the business partner was born
+    All these relation types are 1:1 relations between business partners and adresses, yet they all carry different
+    meaning which we'd like to distinguish in our data.
     """
-    relation_part_a: Any = attrs.field()
+    relation_part_a: Bo4eTyp = attrs.field()
     """
     one Business Object or COM
     """
 
-    relation_part_b: Any = attrs.field()
+    relation_part_b: Bo4eTyp = attrs.field()
     """
     another Business Object or COM
     """
-
-
-SpecificBusinessObject = TypeVar("SpecificBusinessObject", bound=bo4e.bo.geschaeftsobjekt.Geschaeftsobjekt)
-"""
-an arbitrary but fixed business object type
-"""
 
 
 class Bo4eDataSet(Protocol):
@@ -52,9 +67,7 @@ class Bo4eDataSet(Protocol):
         returns all relations between the business objects
         """
 
-    def get_business_object(
-        self, bo_type: Type[SpecificBusinessObject], specification: Optional[str] = None
-    ) -> SpecificBusinessObject:
+    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         """
         Returns a business object of the provided type from the collection.
         If the type alone is not unique, you can provide an additional specification.
