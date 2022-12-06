@@ -11,7 +11,12 @@ import bo4e.bo.geschaeftsobjekt
 @attrs.define(kw_only=True, auto_attribs=True)
 class BusinessObjectRelation:
     """
-    a business object relation describes the relation between two business object
+    A business object relation describes the relation between two business object.
+    E.g. a relation could have the type "has_melo" where relation_part_a is a bo4e.bo.Vertrag
+    and relation_part_b is a bo4e.bo.Messlokation. Some relations are already defined in BO4E itself (e.g MaLo/MeLo)
+    or MeLo/Address.
+    The idea is to not enforce too much of a structure to the downstream code but still push coders to think about
+    necessary relation information.
     """
 
     relation_type: str = attrs.field(validator=attrs.validators.instance_of(str))
