@@ -62,7 +62,7 @@ graph TD
     L3 -->|finally: verify|T
     L3 -->|verification failed|Z
     L1 -->|loading failed|Z
-    L3 -->|verification successful|Y[End]
+    L3 -->|verification successful|Y[The End :)]
     Z-->Z1[Monitoring and Logging]
     Z1-->Z2[Human Analyst]
     Z2 -.->|feedback: heuristically define new rules for|F
