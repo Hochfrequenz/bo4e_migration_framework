@@ -4,7 +4,6 @@ from typing import Iterable, Optional, Type
 import pytest  # type:ignore[import]
 from bo4e.bo.geschaeftspartner import Geschaeftspartner
 from bo4e.com.adresse import Adresse
-from bo4e.enum.strenum import StrEnum
 
 from bomf.model import Bo4eDataSet, Bo4eTyp, BusinessObjectRelation
 
