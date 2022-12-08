@@ -22,6 +22,8 @@ The framework
 - and by doing so will lead to higher chances for maintainable and reusable code.
 
 ## Architeture / Overview
+The overall setup for a migration from 1-n source systems (A, B, C...) to 1-m target systems (1,2, 3...) might look like this:
+
 ```mermaid
 graph TD
     A[Source System A] -->|System A DB Dump| A2[Source A Data Model: A JSON Extract]
@@ -36,6 +38,37 @@ graph TD
     D2 -->L2[Target 2 Loader]
     D3 -->L3[Target 3 Loader]
 ```
+
+### Data Migration Flow
+The migration of specific data from source to target is always the same:
+```mermaid
+graph TD
+    A{Source System A} -->|Export| B(All source data extracts)
+    B -->C[Filter on source data model]
+    C -->|do not match filter predicate| Z{discarded data}
+    C -->|match filter criteria| D[Source to BO4E Mapper]
+    D -->|mapping| E(BO4E Data Sets)
+    E -->F[Validation]
+    F -->|obeys validation rule|E
+    F -->|violate any validation|Z
+    F -->|passes all validations| G[BO4E to Target Mapper]
+    G -->|mapping| H(target data model)
+    H -->I[Target Loader]
+    I -->|load target model|L1[Loader: 1. load to target]
+    L1 -->|first: load to|T{Target System}
+    L1 -->|then|L2[Loader: 2. poll until target has processed data]
+    L2 -->|second: poll until|T
+    L2 -->|then|L3[Loader: 3. verify the data have been processed correctly]
+    L3 -->|finally: verify|T
+    L3 -->|verification failed|Z
+    L1 -->|loading failed|Z
+    L3 -->|verification successful|Y[End]
+    Z-->Z1[Monitoring and Logging]
+    Z1-->Z2[Human Analyst]
+    Z2 -.->|feedback: heuristically define new rules for|F
+    Z2 -.->|feedback: heurisically define new filters for|C
+```
+
 
 ## How to use this Repository on Your Machine (Development)
 
