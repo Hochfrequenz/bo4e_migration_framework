@@ -37,6 +37,9 @@ graph TD
     D1 -->L1[Target 1 Loader]
     D2 -->L2[Target 2 Loader]
     D3 -->L3[Target 3 Loader]
+    L1 -->M1[Target System 1]
+    L2 -->M2[Target System 2]
+    L3 -->M3[Target System 3]
 ```
 
 ### Data Migration Flow
