@@ -47,7 +47,7 @@ The migration of specific data from source to target is always the same:
 ```mermaid
 graph TD
     A{Source System A} -->|Export| B(All source data extracts)
-    B -->C[Filter on source data model]
+    B -->C[Filter on source data model aka Pre-Select]
     C -->|do not match filter predicate| Z{discarded data}
     C -->|match filter criteria| D[Source to BO4E Mapper]
     D -->|mapping| E(BO4E Data Sets)
