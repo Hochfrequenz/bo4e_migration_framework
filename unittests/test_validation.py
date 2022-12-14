@@ -83,7 +83,7 @@ class MyValidation(Bo4eDataSetValidation):
 
 
 class TestValidation:
-    async def test_validation(self, caplog):
+    def test_validation(self, caplog):
         candidates = [
             GeschaeftspartnerMesslokatinDataSet(
                 # valid, because verbrauchsart is no Wärme (W)
