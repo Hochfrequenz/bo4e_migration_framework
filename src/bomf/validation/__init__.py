@@ -49,10 +49,12 @@ class Bo4eDataSetRule(ABC, Generic[DataSetTyp]):
 
 
 @attrs.define(kw_only=True, auto_attribs=True)
-class ValidAndInvalidEntities(Generic[DataSetTyp]):
+class _ValidAndInvalidEntities(Generic[DataSetTyp]):
     """
-    a container type that holds both the invalid and the valid entries
+    A container type that holds both the invalid and the valid entries.
     """
+
+    # This class is only used internally and shouldn't be imported elsewhere. That's why its clunky name doesn't matter.
 
     valid_entities: List[DataSetTyp] = attrs.field(default=attrs.Factory(list))
     """
@@ -75,12 +77,12 @@ class Bo4eDataSetValidation(ABC, Generic[DataSetTyp]):
     the rules which a single data set should obey
     """
 
-    def validate(self, datasets: Iterable[DataSetTyp]) -> ValidAndInvalidEntities:
+    def validate(self, datasets: Iterable[DataSetTyp]) -> _ValidAndInvalidEntities:
         """
         applies all rules to all datasets
         """
         _logger = logging.getLogger(self.__module__)
-        result: ValidAndInvalidEntities[DataSetTyp] = ValidAndInvalidEntities()
+        result: _ValidAndInvalidEntities[DataSetTyp] = _ValidAndInvalidEntities()
         for dataset in datasets:
             dataset_id = dataset.get_id()
             error_messages: List[str] = []
