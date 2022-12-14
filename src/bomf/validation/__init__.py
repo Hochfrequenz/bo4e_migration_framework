@@ -16,7 +16,7 @@ DataSetTyp = TypeVar("DataSetTyp", bound=Bo4eDataSet)
 @attrs.define(kw_only=True, auto_attribs=True)
 class DataSetValidationResult:
     """
-    a dataset validation result is the outcome of one atomic validation
+    a dataset validation result is the outcome of the evaluation of one atomic validation rule
     """
 
     is_valid: bool = attrs.field(validator=attrs.validators.instance_of(bool))
