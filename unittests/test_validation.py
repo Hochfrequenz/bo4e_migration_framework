@@ -91,12 +91,12 @@ class TestValidation:
                 geschaeftspartner=Geschaeftspartner.construct(name2="Hans"),
             ),
             GeschaeftspartnerMesslokatinDataSet(
-                # invalid, because verbrauchsart is Wärme (W)
+                # invalid, because verbrauchsart is also Wärme (W)
                 marktlokation=Marktlokation.construct(marktlokations_id="87301147632", verbrauchsart=Verbrauchsart.KLW),
                 geschaeftspartner=Geschaeftspartner.construct(name2="Hans"),
             ),
             GeschaeftspartnerMesslokatinDataSet(
-                # valid, because vorname is not hans but crashes in the seconds rul
+                # valid, because vorname is not hans but crashes in the second rule
                 marktlokation=Marktlokation.construct(marktlokations_id="78192756766", verbrauchsart=Verbrauchsart.W),
                 geschaeftspartner=Geschaeftspartner.construct(name2="Günther"),
             ),
