@@ -84,4 +84,11 @@ class Bo4eDataSet(ABC):
         Inheriting classes may overwrite this behaviour, if the dataset has "more natural" keys.
         By default, the id is a stringified UUID that is created in the dataset constructor.
         """
-        return str(self._uuid)
+        try:
+            return str(self._uuid)
+        except AttributeError as attribute_error:
+            if attribute_error.name == "_uuid" in str(attribute_error):
+                raise Exception(
+                    f"You probably forgot to call super().__init()__ in the constructor of {self.__class__}"
+                ) from attribute_error
+            raise
