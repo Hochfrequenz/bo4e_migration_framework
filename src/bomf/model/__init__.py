@@ -2,7 +2,9 @@
 general data models for migrations
 """
 import enum
-from typing import Generic, Iterable, Optional, Protocol, Type, TypeVar, Union
+import uuid
+from abc import ABC, abstractmethod
+from typing import Iterable, Optional, Type, TypeVar, Union
 
 import attrs
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
@@ -55,20 +57,31 @@ class BusinessObjectRelation:
     """
 
 
-class Bo4eDataSet(Protocol):
+class Bo4eDataSet(ABC):
     """
     A BO4E data set is a collection of Business Objects that relate to each other.
-    This class just defines methods that any bo4e data set should implement (via structural subtyping) without forcing
-    the data sets to inherit from a common base class.
     """
 
+    def __init__(self):
+        self._uuid = uuid.uuid4()
+
+    @abstractmethod
     def get_relations(self) -> Iterable[BusinessObjectRelation]:
         """
         returns all relations between the business objects
         """
 
+    @abstractmethod
     def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         """
         Returns a business object of the provided type from the collection.
         If the type alone is not unique, you can provide an additional specification.
         """
+
+    def get_id(self) -> str:
+        """
+        returns a unique id that only this dataset uses.
+        Inheriting classes may overwrite this behaviour, if the dataset has "more natural" keys.
+        By default, the id is a stringified UUID that is created in the dataset constructor.
+        """
+        return str(self._uuid)
