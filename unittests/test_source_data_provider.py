@@ -24,5 +24,7 @@ class TestSourceDataProvider:
     @pytest.mark.datafiles("./unittests/example_source_data.json")
     def test_json_file_provider(self, datafiles):
         file_path = datafiles / Path("example_source_data.json")
-        example_json_data_provider = JsonFileSourceDataProvider(file_path, lambda d: d["data"])
+        example_json_data_provider = JsonFileSourceDataProvider(
+            file_path, lambda d: d["data"]  # type:ignore[call-overload]
+        )
         assert example_json_data_provider.get_data() == [{"asd": "fgh"}, {"qwe": "rtz"}]

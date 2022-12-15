@@ -24,7 +24,7 @@ class SourceDataProvider(ABC, Generic[SourceDataModel]):
         """
 
 
-class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel]):
+class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel], Generic[SourceDataModel]):
     """
     a source data model provider that is based on a JSON file
     """
@@ -36,7 +36,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel]):
         """
         with open(json_file_path, "r") as json_file:
             raw_data = json.load(json_file)
-        self._source_data_models = data_selector(raw_data)
+        self._source_data_models: List[SourceDataModel] = data_selector(raw_data)
 
-    def get_data(self):
+    def get_data(self) -> Iterable[SourceDataModel]:
         return self._source_data_models
