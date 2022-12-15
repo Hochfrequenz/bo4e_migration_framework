@@ -1,8 +1,10 @@
 """
 providers provide data
 """
+import json
 from abc import ABC, abstractmethod
-from typing import Generic, Iterable
+from pathlib import Path
+from typing import Callable, Generic, Iterable, List, Union
 
 from bomf.mapper import SourceDataModel
 
@@ -20,3 +22,20 @@ class SourceDataProvider(ABC, Generic[SourceDataModel]):
         Returns all available entities from the source data model.
         They will be filtered in a SourceDataModel Filter ("Preselect")
         """
+
+
+class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel]):
+    """
+    a source data model provider that is based on a JSON file
+    """
+
+    def __init__(self, json_file_path: Path, data_selector: Callable[[Union[dict, list]], List[SourceDataModel]]):
+        """
+        initialize by providing a path that describes the position of the data in the json file.
+        """
+        with open(json_file_path, "r") as json_file:
+            raw_data = json.load(json_file)
+        self._source_data_models = data_selector(raw_data)
+
+    def get_data(self):
+        return self._source_data_models
