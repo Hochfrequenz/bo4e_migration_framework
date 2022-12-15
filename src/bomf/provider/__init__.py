@@ -31,7 +31,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel]):
 
     def __init__(self, json_file_path: Path, data_selector: Callable[[Union[dict, list]], List[SourceDataModel]]):
         """
-        initialize by providing a path that describes the position of the data in the json file.
+        initialize by providing a filepath to the json file and an accessor that describes the position of the data within the file.
         """
         with open(json_file_path, "r") as json_file:
             raw_data = json.load(json_file)
