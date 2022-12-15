@@ -29,12 +29,17 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel], Generic[So
     a source data model provider that is based on a JSON file
     """
 
-    def __init__(self, json_file_path: Path, data_selector: Callable[[Union[dict, list]], List[SourceDataModel]]):
+    def __init__(
+        self,
+        json_file_path: Path,
+        data_selector: Callable[[Union[dict, list]], List[SourceDataModel]],
+        encoding="utf-8",
+    ):
         """
         initialize by providing a filepath to the json file and an accessor that describes the position of the data
         within the file.
         """
-        with open(json_file_path, "r") as json_file:
+        with open(json_file_path, "r", encoding=encoding) as json_file:
             raw_data = json.load(json_file)
         self._source_data_models: List[SourceDataModel] = data_selector(raw_data)
 
