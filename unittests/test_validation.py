@@ -109,8 +109,8 @@ class TestValidation:
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         my_validation = MyValidation()
         validation_result = my_validation.validate(candidates)
-        assert len(validation_result.valid_entities) == 2
-        assert len(validation_result.invalid_entities) == 2
+        assert len(validation_result.valid_entries) == 2
+        assert len(validation_result.invalid_entries) == 2
         assert "dataset 53502368955 obeys the rule 'Kein Hans mit Wärme'" in caplog.messages
         assert "✔ data set 53502368955 is valid" in caplog.messages
         assert "dataset 87301147632 does not obey: 'hier die fehlermeldung'" in caplog.messages

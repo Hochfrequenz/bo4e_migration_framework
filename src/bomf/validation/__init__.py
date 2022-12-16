@@ -56,11 +56,11 @@ class _ValidAndInvalidEntities(Generic[DataSetTyp]):
 
     # This class is only used internally and shouldn't be imported elsewhere. That's why its clunky name doesn't matter.
 
-    valid_entities: List[DataSetTyp] = attrs.field(default=attrs.Factory(list))
+    valid_entries: List[DataSetTyp] = attrs.field(default=attrs.Factory(list))
     """
     those entries that are valid and may pass on to the loader
     """
-    invalid_entities: List[Tuple[DataSetTyp, List[str]]] = attrs.field(default=attrs.Factory(list))
+    invalid_entries: List[Tuple[DataSetTyp, List[str]]] = attrs.field(default=attrs.Factory(list))
     """
     those entries that are invalid together with their respective error messages
     """
@@ -101,10 +101,10 @@ class Bo4eDataSetValidation(ABC, Generic[DataSetTyp]):
                     _logger.debug("dataset %s does not obey: '%s'", dataset_id, validation_result.error_message)
                     error_messages.append(validation_result.error_message or "<no error message provided>")
             if len(error_messages) == 0:
-                result.valid_entities.append(dataset)
+                result.valid_entries.append(dataset)
                 _logger.info("✔ data set %s is valid", dataset_id)
             else:
-                result.invalid_entities.append((dataset, error_messages))
+                result.invalid_entries.append((dataset, error_messages))
                 _logger.info("❌ data set %s is invalid", dataset_id)
 
         return result
