@@ -35,7 +35,7 @@ class GeschaeftspartnerMesslokatinDataSet(Bo4eDataSet):
         return self._malo.marktlokations_id
 
 
-class DontMigrateCustomersWithVornameHansAndWaermenutzung(Bo4eDataSetRule):
+class DontMigrateCustomersWithVornameKlausAndWaermenutzung(Bo4eDataSetRule):
     """
     This test should show that the validations act on a whole data set that consists of multiple objects.
     The validations are thought to catch inconsitencies between the objects while the (source data) filters should
@@ -45,13 +45,13 @@ class DontMigrateCustomersWithVornameHansAndWaermenutzung(Bo4eDataSetRule):
     def validate(self, dataset: GeschaeftspartnerMesslokatinDataSet) -> DataSetValidationResult:
         customer: Geschaeftspartner = dataset.get_business_object(Geschaeftspartner)
         malo: Marktlokation = dataset.get_business_object(Marktlokation)
-        forbidden_verbrauchsarts_for_hans = (Verbrauchsart.W, Verbrauchsart.WS, Verbrauchsart.KLW, Verbrauchsart.KLWS)
-        if customer.name2 == "Hans" and malo.verbrauchsart in forbidden_verbrauchsarts_for_hans:
+        forbidden_verbrauchsarts_for_Klaus = (Verbrauchsart.W, Verbrauchsart.WS, Verbrauchsart.KLW, Verbrauchsart.KLWS)
+        if customer.name2 == "Klaus" and malo.verbrauchsart in forbidden_verbrauchsarts_for_Klaus:
             return DataSetValidationResult(is_valid=False, error_message="hier die fehlermeldung")
         return DataSetValidationResult(is_valid=True)
 
     def __str__(self):
-        return "Kein Hans mit Wärme"
+        return "Kein Klaus mit Wärme"
 
 
 class ARuleThatCrashesInOneOutOfFourTimesForDemoPurposes(Bo4eDataSetRule):
@@ -76,7 +76,7 @@ class MyValidation(Bo4eDataSetValidation):
     def __init__(self):
         super().__init__(
             rules=[
-                DontMigrateCustomersWithVornameHansAndWaermenutzung(),
+                DontMigrateCustomersWithVornameKlausAndWaermenutzung(),
                 ARuleThatCrashesInOneOutOfFourTimesForDemoPurposes(),
             ]
         )
@@ -88,20 +88,20 @@ class TestValidation:
             GeschaeftspartnerMesslokatinDataSet(
                 # valid, because verbrauchsart is no Wärme (W)
                 marktlokation=Marktlokation.construct(marktlokations_id="53502368955", verbrauchsart=Verbrauchsart.KL),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Hans"),
+                geschaeftspartner=Geschaeftspartner.construct(name2="Klaus"),
             ),
             GeschaeftspartnerMesslokatinDataSet(
                 # invalid, because verbrauchsart is also Wärme (W)
                 marktlokation=Marktlokation.construct(marktlokations_id="87301147632", verbrauchsart=Verbrauchsart.KLW),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Hans"),
+                geschaeftspartner=Geschaeftspartner.construct(name2="Klaus"),
             ),
             GeschaeftspartnerMesslokatinDataSet(
-                # valid, because vorname is not hans but crashes in the second rule
+                # valid, because vorname is not Klaus but crashes in the second rule
                 marktlokation=Marktlokation.construct(marktlokations_id="78192756766", verbrauchsart=Verbrauchsart.W),
                 geschaeftspartner=Geschaeftspartner.construct(name2="Günther"),
             ),
             GeschaeftspartnerMesslokatinDataSet(
-                # valid, because vorname is not hans - no crash
+                # valid, because vorname is not Klaus - no crash
                 marktlokation=Marktlokation.construct(marktlokations_id="18410127695", verbrauchsart=Verbrauchsart.W),
                 geschaeftspartner=Geschaeftspartner.construct(name2="Klause"),
             ),
@@ -111,7 +111,7 @@ class TestValidation:
         validation_result = my_validation.validate(candidates)
         assert len(validation_result.valid_entries) == 2
         assert len(validation_result.invalid_entries) == 2
-        assert "dataset 53502368955 obeys the rule 'Kein Hans mit Wärme'" in caplog.messages
+        assert "dataset 53502368955 obeys the rule 'Kein Klaus mit Wärme'" in caplog.messages
         assert "✔ data set 53502368955 is valid" in caplog.messages
         assert "dataset 87301147632 does not obey: 'hier die fehlermeldung'" in caplog.messages
         assert "❌ data set 78192756766 is invalid" in caplog.messages

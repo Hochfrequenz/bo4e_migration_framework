@@ -17,7 +17,7 @@ class _GeschaeftspartnerAdresseRelation(enum.Enum):
 class _ExampleDataSet(Bo4eDataSet):
     def __init__(self):
         super().__init__()
-        self.business_partner = Geschaeftspartner.construct(name1="Müller", name2="Hans")
+        self.business_partner = Geschaeftspartner.construct(name1="Müller", name2="Klaus")
         self.address = Adresse.construct(strasse="Rechnungsstrasse", hausnummer="5")
 
     def get_relations(self) -> Iterable[BusinessObjectRelation]:
