@@ -61,6 +61,7 @@ class MigrationStrategy(ABC, Generic[SourceDataModel, IntermediateDataSet, Targe
         5. mapping from bo4e to the target data model
         6. loading the target data models into the target system.
         """
+        # todo: here we should add some logging and statistics stuff
         source_data_models = self.source_data_provider.get_data()
         if not isinstance(source_data_models, list):
             source_data_models = list(source_data_models)
