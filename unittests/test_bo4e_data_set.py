@@ -14,9 +14,10 @@ class _GeschaeftspartnerAdresseRelation(enum.Enum):
     HAS_GEBURTSORT = 3
 
 
-class _ExampleDataSet:
+class _ExampleDataSet(Bo4eDataSet):
     def __init__(self):
-        self.business_partner = Geschaeftspartner.construct(name1="Müller", name2="Hans")
+        super().__init__()
+        self.business_partner = Geschaeftspartner.construct(name1="Müller", name2="Klaus")
         self.address = Adresse.construct(strasse="Rechnungsstrasse", hausnummer="5")
 
     def get_relations(self) -> Iterable[BusinessObjectRelation]:
@@ -44,3 +45,4 @@ class TestBo4eDataSet:
         assert len(list(dataset.get_relations())) == 1
         assert isinstance(dataset.get_business_object(Geschaeftspartner), Geschaeftspartner)
         assert isinstance(dataset.get_business_object(Adresse), Adresse)
+        assert dataset.get_id() is not None
