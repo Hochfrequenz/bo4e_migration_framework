@@ -2,7 +2,7 @@
 mappers convert from source data model to BO4E and from BO4E to a target data model
 """
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Generic, List, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -34,6 +34,13 @@ class SourceToBo4eDataSetMapper(ABC, Generic[SourceDataModel, IntermediateDataSe
         maps the given source data model into an intermediate data set
         """
 
+    def create_data_sets(self, sources: List[SourceDataModel]) -> List[IntermediateDataSet]:
+        """
+        apply the mapping to all the provided dataset
+        """
+        # here we could use some error handling in the future
+        return [self.create_data_set(source=source_data_model) for source_data_model in sources]
+
 
 # pylint:disable=too-few-public-methods
 class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSet]):
@@ -46,3 +53,10 @@ class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSe
         """
         maps the given source data model into an intermediate data set
         """
+
+    def create_target_models(self, datasets: List[IntermediateDataSet]) -> List[TargetDataModel]:
+        """
+        apply the mapping to all the provided dataset
+        """
+        # here we could use some error handling in the future
+        return [self.create_target_model(dataset=dataset) for dataset in datasets]

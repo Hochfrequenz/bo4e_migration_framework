@@ -1,9 +1,10 @@
 """
 entity loaders load entities into the target system
 """
+import asyncio
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Awaitable, Generic, Optional, TypeVar
+from typing import Awaitable, Generic, List, Optional, TypeVar
 
 import attrs
 
@@ -126,3 +127,12 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
             loaded_at=loaded_at,
             loading_error=None,
         )
+
+    async def load_entities(self, entities: List[_TargetEntity]) -> List[LoadingSummary]:
+        """
+        load all the given entities into the target system
+        """
+        # here we could use some error handling in the future
+        tasks: List[Awaitable[LoadingSummary]] = [self.load(entity) for entity in entities]
+        result = await asyncio.gather(*tasks)
+        return result
