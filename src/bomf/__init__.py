@@ -19,6 +19,7 @@ from bomf.provider import SourceDataProvider
 from bomf.validation import Bo4eDataSetValidation
 
 
+# pylint:disable=too-few-public-methods
 @attrs.define(kw_only=True, auto_attribs=True)
 class MigrationStrategy(ABC, Generic[SourceDataModel, IntermediateDataSet, TargetDataModel]):
     """
@@ -64,7 +65,7 @@ class MigrationStrategy(ABC, Generic[SourceDataModel, IntermediateDataSet, Targe
         if not isinstance(source_data_models, list):
             source_data_models = list(source_data_models)
         filter_survivors = await self.preselect_filter.apply(source_data_models)
-        bo4e_datasets = self.source_to_bo4e_mapper.create_data_set(filter_survivors)
+        bo4e_datasets = self.source_to_bo4e_mapper.create_data_sets(filter_survivors)
         valid_entries = self.validation.validate(bo4e_datasets).valid_entries
         target_data_models = self.bo4e_to_target_mapper.create_target_models(valid_entries)
         loading_summaries = await self.target_loader.load_entities(target_data_models)
