@@ -40,7 +40,7 @@ class MigrationStrategy(ABC, Generic[SourceDataModel, IntermediateDataSet, Targe
     """
     validation: Bo4eDataSetValidation[IntermediateDataSet]
     """
-    a set of validation rules tht are applied to the bo4e data sets
+    a set of validation rules that are applied to the bo4e data sets
     """
     bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet]
     """
