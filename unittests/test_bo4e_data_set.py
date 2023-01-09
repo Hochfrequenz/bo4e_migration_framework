@@ -41,7 +41,7 @@ class _ExampleDataSet(Bo4eDataSet):
 
 class TestBo4eDataSet:
     async def test_example_data_set(self):
-        dataset: Bo4eDataSet = _ExampleDataSet()
+        dataset: _ExampleDataSet = _ExampleDataSet()
         assert len(list(dataset.get_relations())) == 1
         assert isinstance(dataset.get_business_object(Geschaeftspartner), Geschaeftspartner)
         assert isinstance(dataset.get_business_object(Adresse), Adresse)

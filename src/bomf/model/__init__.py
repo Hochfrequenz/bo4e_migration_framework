@@ -65,19 +65,6 @@ class Bo4eDataSet(ABC):
     def __init__(self):
         self._uuid = uuid.uuid4()
 
-    @abstractmethod
-    def get_relations(self) -> Iterable[BusinessObjectRelation]:
-        """
-        returns all relations between the business objects
-        """
-
-    @abstractmethod
-    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
-        """
-        Returns a business object of the provided type from the collection.
-        If the type alone is not unique, you can provide an additional specification.
-        """
-
     def get_id(self) -> str:
         """
         returns a unique id that only this dataset uses.
