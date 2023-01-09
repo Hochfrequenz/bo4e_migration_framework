@@ -68,7 +68,20 @@ class TestMapper:
             malo=Marktlokation.construct(marktlokations_id="54321012345"),
         )
 
+    def test_source_to_intermediate_mapper_batch(self):
+        mapper = _DictToMaLoMeLoMapper()
+        actual = mapper.create_data_sets([{"maloId": "54321012345", "meloId": "DE000111222333"}])
+        assert actual == [
+            _MaLoAndMeLo(
+                melo=Messlokation.construct(messlokations_id="DE000111222333"),
+                malo=Marktlokation.construct(marktlokations_id="54321012345"),
+            )
+        ]
+
     def test_intermediate_to_target_mapper(self):
+        """
+        tests the single data set mapping
+        """
         mapper = _MaLoMeLoToListMapper()
         actual = mapper.create_target_model(
             _MaLoAndMeLo(
@@ -77,3 +90,18 @@ class TestMapper:
             )
         )
         assert actual == ["54321012345", "DE000111222333"]
+
+    def test_intermediate_to_target_mapper_batch(self):
+        """
+        test the batch mapping
+        """
+        mapper = _MaLoMeLoToListMapper()
+        actual = mapper.create_target_models(
+            [
+                _MaLoAndMeLo(
+                    melo=Messlokation.construct(messlokations_id="DE000111222333"),
+                    malo=Marktlokation.construct(marktlokations_id="54321012345"),
+                )
+            ]
+        )
+        assert actual == [["54321012345", "DE000111222333"]]
