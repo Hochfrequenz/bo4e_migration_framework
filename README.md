@@ -28,7 +28,7 @@ The overall setup for a migration from 1-n source systems (A, B, C...) to 1-m ta
 graph TD
     A[Source System A] -->|System A DB Dump| A2[Source A Data Model: A JSON Extract]
     B[Source System B] -->|System B CSV Export| B2[Source B Data Model: B CSV Files]
-    A2 -->|SourceAToBo4eDataSetMapper| C{Intermediate BO4E Layer}
+    A2 -->|SourceAToBo4eDataSetMapper| C{Intermediate BO4E Layer aka DataSets}
     B2 -->|SourceBToBo4eDataSetMapper| C
     C -->|validations| C
     C -->|Bo4eDataSetToTarget1Mapper| D1[Target 1 Data Model]
@@ -41,6 +41,7 @@ graph TD
     L2 -->M2[Target System 2]
     L3 -->M3[Target System 3]
 ```
+The Intermediate BO4E Layer (that consists of different so called DataSets) is kind of a contract between the code that maps *from the source data model* and the code that maps *to the target data model*.
 
 ### Data Migration Flow
 The migration of specific data from source to target is always the same:
