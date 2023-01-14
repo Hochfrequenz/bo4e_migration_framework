@@ -4,7 +4,7 @@ providers provide data
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Generic, Iterable, List, Union
+from typing import Callable, Generic, List, Union
 
 from bomf.mapper import SourceDataModel
 
@@ -17,7 +17,7 @@ class SourceDataProvider(ABC, Generic[SourceDataModel]):
     """
 
     @abstractmethod
-    def get_data(self) -> Iterable[SourceDataModel]:
+    def get_data(self) -> List[SourceDataModel]:
         """
         Returns all available entities from the source data model.
         They will be filtered in a SourceDataModel Filter ("Preselect")
@@ -43,5 +43,5 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel], Generic[So
             raw_data = json.load(json_file)
         self._source_data_models: List[SourceDataModel] = data_selector(raw_data)
 
-    def get_data(self) -> Iterable[SourceDataModel]:
+    def get_data(self) -> List[SourceDataModel]:
         return self._source_data_models
