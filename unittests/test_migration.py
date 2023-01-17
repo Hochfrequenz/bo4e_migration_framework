@@ -15,11 +15,13 @@ from bomf import (
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
 )
-from bomf.loader.entityloader import EntityLoadingResult, _TargetEntity
+from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet, Bo4eTyp, BusinessObjectRelation
+from bomf.provider import KeyTyp
 from bomf.validation import Bo4eDataSetRule, DataSetValidationResult
 
 _MySourceDataModel = Dict[str, str]
+_MyKeyTyp = str
 _MyTargetDataModel = List[str]
 
 
@@ -37,7 +39,10 @@ class _MyIntermediateDataModel(Bo4eDataSet):
         return "12345"
 
 
-class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel]):
+class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
+    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
+        raise NotImplementedError("Not relevant for the test")
+
     def get_data(self) -> List[_MySourceDataModel]:
         return [
             {"foo": "bar"},

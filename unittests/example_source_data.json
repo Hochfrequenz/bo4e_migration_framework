@@ -1,4 +1,4 @@
 {
   "foo": "bar",
-  "data": [{ "asd": "fgh" }, { "qwe": "rtz" }]
+  "data": [{ "myKey":"hello", "asd": "fgh" }, { "myKey": "world", "qwe": "rtz" }]
 }
