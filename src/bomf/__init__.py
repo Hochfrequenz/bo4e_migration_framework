@@ -15,18 +15,18 @@ from bomf.mapper import (
     SourceToBo4eDataSetMapper,
     TargetDataModel,
 )
-from bomf.provider import SourceDataProvider
+from bomf.provider import KeyTyp, SourceDataProvider
 from bomf.validation import Bo4eDataSetValidation
 
 
 # pylint:disable=too-few-public-methods
 @attrs.define(kw_only=True, auto_attribs=True)
-class MigrationStrategy(ABC, Generic[SourceDataModel, IntermediateDataSet, TargetDataModel]):
+class MigrationStrategy(ABC, Generic[SourceDataModel, KeyTyp, IntermediateDataSet, TargetDataModel]):
     """
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
-    source_data_provider: SourceDataProvider[SourceDataModel]
+    source_data_provider: SourceDataProvider[SourceDataModel, KeyTyp]
     """
     a source from where data shall be migrated
     """
