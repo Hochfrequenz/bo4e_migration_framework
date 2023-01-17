@@ -38,7 +38,7 @@ class _MyIntermediateDataModel(Bo4eDataSet):
 
 
 class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel]):
-    def get_data(self) -> Iterable[_MySourceDataModel]:
+    def get_data(self) -> List[_MySourceDataModel]:
         return [
             {"foo": "bar"},
             {"FOO": "BAR"},

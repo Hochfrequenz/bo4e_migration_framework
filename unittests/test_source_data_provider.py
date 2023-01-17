@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable
+from typing import List
 
 import pytest  # type:ignore[import]
 
@@ -11,7 +11,7 @@ class LegacyDataSystemDataProvider(SourceDataProvider):
     a dummy for access to a legacy system from which we want to migrate data
     """
 
-    def get_data(self) -> Iterable[str]:
+    def get_data(self) -> List[str]:
         return ["foo", "bar", "baz"]
 
 
