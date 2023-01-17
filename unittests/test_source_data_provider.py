@@ -30,8 +30,8 @@ class TestSourceDataProvider:
         file_path = datafiles / Path("example_source_data.json")
         example_json_data_provider = JsonFileSourceDataProvider(
             file_path,
-            data_selector=lambda d: d["data"],
-            key_selector=lambda d: d["myKey"],  # type:ignore[call-overload,index]
+            data_selector=lambda d: d["data"],  # type:ignore[call-overload]
+            key_selector=lambda d: d["myKey"],  # type:ignore[index]
         )
         assert example_json_data_provider.get_data() == [
             {"myKey": "hello", "asd": "fgh"},
