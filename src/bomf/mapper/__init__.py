@@ -6,12 +6,6 @@ from typing import Generic, List, TypeVar
 
 from bomf.model import Bo4eDataSet
 
-SourceDataSet = TypeVar("SourceDataSet")
-"""
-A source data set bundles multiple objects on the source side of things.
-It is _not_ based on BO4E but only contains models from the source system.
-"""
-
 TargetDataModel = TypeVar("TargetDataModel")
 """
 Target data model is the data model of the target (meaning: the data model of the system to which you'd like to migrate)
@@ -25,7 +19,7 @@ It is based on BO4E.
 
 
 # pylint:disable=too-few-public-methods
-class SourceDataSetToBo4eDataSetMapper(ABC, Generic[SourceDataSet, IntermediateDataSet]):
+class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     """
     A mapper that maps one or multiple source into Bo4eDataSets
     """

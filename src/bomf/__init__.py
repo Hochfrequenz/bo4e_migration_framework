@@ -8,25 +8,19 @@ import attrs
 
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
-from bomf.mapper import (
-    Bo4eDataSetToTargetMapper,
-    IntermediateDataSet,
-    SourceDataSet,
-    SourceDataSetToBo4eDataSetMapper,
-    TargetDataModel,
-)
+from bomf.mapper import Bo4eDataSetToTargetMapper, IntermediateDataSet, SourceToBo4eDataSetMapper, TargetDataModel
 from bomf.provider import KeyTyp, SourceDataProvider
 from bomf.validation import Bo4eDataSetValidation
 
 
 # pylint:disable=too-few-public-methods
 @attrs.define(kw_only=True, auto_attribs=True)
-class MigrationStrategy(ABC, Generic[SourceDataSet, IntermediateDataSet, TargetDataModel]):
+class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     """
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
-    source_data_set_to_bo4e_mapper: SourceDataSetToBo4eDataSetMapper[SourceDataSet, IntermediateDataSet]
+    source_data_set_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet]
     """
     A mapper that transforms source data models into data sets that consist of bo4e objects
     """

@@ -12,7 +12,7 @@ from bomf import (
     Filter,
     MigrationStrategy,
     SourceDataProvider,
-    SourceDataSetToBo4eDataSetMapper,
+    SourceToBo4eDataSetMapper,
 )
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
@@ -51,7 +51,7 @@ class _MyFilter(Filter[_MySourceDataModel]):
         return "remove by filter" not in candidate
 
 
-class _MyToBo4eMapper(SourceDataSetToBo4eDataSetMapper[_MySourceDataModel, _MyIntermediateDataModel]):
+class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
     def __init__(self, what_ever_you_like: List[_MySourceDataModel]):
         # what_ever_you_like is a place holde for all the relation magic that may happen
         self._source_models = what_ever_you_like

@@ -1,12 +1,12 @@
-from typing import Dict, Iterable, List, Optional, Type
+from typing import List, Optional, Type
 
 import attrs
 import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
 
-from bomf.mapper import Bo4eDataSetToTargetMapper, SourceDataSetToBo4eDataSetMapper
-from bomf.model import Bo4eTyp, BusinessObjectRelation
+from bomf.mapper import Bo4eDataSetToTargetMapper, SourceToBo4eDataSetMapper
+from bomf.model import Bo4eTyp
 
 
 class _NotImplementedBo4eDataSetMixin:
@@ -37,7 +37,7 @@ class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
 # This is just to demonstrate the mapping structures.
 
 
-class _DictToMaLoMeLoMapper(SourceDataSetToBo4eDataSetMapper):
+class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
     def create_data_sets(self) -> List[_MaLoAndMeLo]:
         return [
             _MaLoAndMeLo(
