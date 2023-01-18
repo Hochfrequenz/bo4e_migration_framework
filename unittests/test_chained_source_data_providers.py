@@ -61,6 +61,8 @@ class CombinedCustomerWithMultipleContractsDataProvider(SourceDataProvider[_Cust
         """
         todo: diese konstruktor können wir übergeben, was immer wir wollen und er kann die verbindungen herstellen,
         zwischen den verschiedenen objekten.
+        es könnte entweder die pfade der einzelnen dateien bekommen oder schon source data providers für contract und
+        customer
         """
 
     def get_data(self) -> List[_CustomerWithMultipleContracts]:
@@ -77,6 +79,7 @@ class DataSetWithCustomer:
 
 
 class CustomerDataSetMapper(SourceToBo4eDataSetMapper[DataSetWithCustomer]):
+    # dieses ding wird dann in der migration strategie verwendet.
     def create_data_set(self, source: _CustomerWithMultipleContracts) -> IntermediateDataSet:
         # der hier frisst jetzt mehrere beliebig zusammengewürftel objekte aus dem source system
         pass
