@@ -8,7 +8,8 @@ from bomf.model import Bo4eDataSet
 
 SourceDataModel = TypeVar("SourceDataModel")
 """
-source data model is the data model of the source (meaning: the data model of the system from which the data originate)
+Source data model is the data model of the source (meaning: the data model of the system from which the data originate).
+This might be single entities but could also be containers of multiple objects.
 """
 
 TargetDataModel = TypeVar("TargetDataModel")
