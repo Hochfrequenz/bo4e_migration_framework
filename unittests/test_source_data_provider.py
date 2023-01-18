@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import pytest  # type:ignore[import]
 
-from bomf import SourceDataModel
 from bomf.provider import JsonFileSourceDataProvider, KeyTyp, SourceDataProvider
 
 
@@ -12,7 +11,7 @@ class LegacyDataSystemDataProvider(SourceDataProvider):
     a dummy for access to a legacy system from which we want to migrate data
     """
 
-    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
+    def get_entry(self, key: KeyTyp) -> Optional[str]:
         raise NotImplementedError("Not relevant for this test")
 
     def get_data(self) -> List[str]:
