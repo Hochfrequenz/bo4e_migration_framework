@@ -21,7 +21,7 @@ It is based on BO4E.
 # pylint:disable=too-few-public-methods
 class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     """
-    A mapper that maps one or multiple source into Bo4eDataSets
+    A mapper that maps one or multiple sources into Bo4eDataSets
     """
 
     # the inheriting class is free to combine and bundle the source data as it wants.
