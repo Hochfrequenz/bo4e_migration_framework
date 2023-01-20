@@ -47,11 +47,15 @@ The Intermediate BO4E Layer (that consists of different so called DataSets) is k
 The migration of specific data from source to target is always the same:
 ```mermaid
 graph TD
-    A{Source System A} -->|Export| B(All source data extracts)
-    B -->C[Filter on source data model aka Pre-Select]
-    C -->|do not match filter predicate| Z{discarded data}
-    C -->|match filter criteria| D[Source to BO4E Mapper]
-    D -->|mapping| E(BO4E Data Sets)
+    A1{Source Data 1} -->|Export| B1(All source data 1 extracts)
+    B1 -->C1[Filter on source data 1 model aka Pre-Select 1]
+    A2{Source Data 2} -->|Export| B2(All source data 2 extracts)
+    B2 -->C2[Filter on source data 2 model aka Pre-Select 2]
+    C1 -->|do not match filter predicate| Z{discarded data}
+    C1 -->|match filter criteria| M(Custom Logic: SourceDataSetToBo4EDataSetMapper) 
+    C2 -->|do not match filter predicate| Z
+    C2 -->|match filter criteria| M
+    M -->|mapping| E(BO4E Data Sets)
     E -->F[Validation]
     F -->|obeys a validation rule|E
     F -->|violate any validation rule|Z

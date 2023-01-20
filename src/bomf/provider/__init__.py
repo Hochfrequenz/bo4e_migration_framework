@@ -6,7 +6,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, Generic, List, Mapping, Optional, TypeVar, Union
 
-from bomf.mapper import SourceDataModel
+SourceDataModel = TypeVar("SourceDataModel")
+"""
+Source data model is the data model of the source (meaning: the data model of the system from which the data originate).
+"""
 
 KeyTyp = TypeVar("KeyTyp")
 """
