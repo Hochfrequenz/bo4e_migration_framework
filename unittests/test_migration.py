@@ -1,7 +1,7 @@
 """
 Tests the overall data flow using bomf.
 """
-from typing import Dict, Iterable, List, Optional, Type
+from typing import Dict, List, Optional
 
 import attrs
 
@@ -11,33 +11,31 @@ from bomf import (
     EntityLoader,
     Filter,
     MigrationStrategy,
-    SourceDataModel,
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
 )
-from bomf.loader.entityloader import EntityLoadingResult, _TargetEntity
-from bomf.model import Bo4eDataSet, Bo4eTyp, BusinessObjectRelation
+from bomf.loader.entityloader import EntityLoadingResult
+from bomf.model import Bo4eDataSet
+from bomf.provider import KeyTyp, SourceDataModel
 from bomf.validation import Bo4eDataSetRule, DataSetValidationResult
 
 _MySourceDataModel = Dict[str, str]
+_MyKeyTyp = str
 _MyTargetDataModel = List[str]
 
 
 @attrs.define(auto_attribs=True, kw_only=True)
 class _MyIntermediateDataModel(Bo4eDataSet):
-    def get_relations(self) -> Iterable[BusinessObjectRelation]:
-        raise NotImplementedError("not relevant for the test")
-
-    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
-        raise NotImplementedError("not relevant for the test")
-
     data: Dict[str, str]
 
     def get_id(self) -> str:
         return "12345"
 
 
-class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel]):
+class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
+    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
+        raise NotImplementedError("Not relevant for the test")
+
     def get_data(self) -> List[_MySourceDataModel]:
         return [
             {"foo": "bar"},
@@ -53,9 +51,13 @@ class _MyFilter(Filter[_MySourceDataModel]):
         return "remove by filter" not in candidate
 
 
-class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MySourceDataModel, _MyIntermediateDataModel]):
-    def create_data_set(self, source: _MySourceDataModel) -> _MyIntermediateDataModel:
-        return _MyIntermediateDataModel(data=source)
+class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
+    def __init__(self, what_ever_you_like: List[_MySourceDataModel]):
+        # what_ever_you_like is a place holde for all the relation magic that may happen
+        self._source_models = what_ever_you_like
+
+    def create_data_sets(self) -> List[_MyIntermediateDataModel]:
+        return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 
 class _MyRule(Bo4eDataSetRule[_MyIntermediateDataModel]):
@@ -88,15 +90,7 @@ class _MyTargetLoader(EntityLoader):
 
 
 class MyMigrationStrategy(MigrationStrategy):
-    def __init__(self):
-        super().__init__(
-            source_data_provider=_MySourceDataProvider(),
-            preselect_filter=_MyFilter(),
-            source_to_bo4e_mapper=_MyToBo4eMapper(),
-            validation=_MyValidation(),
-            bo4e_to_target_mapper=_MyToTargetMapper(),
-            target_loader=_MyTargetLoader(),
-        )
+    pass
 
 
 class TestMigrationStrategy:
@@ -105,7 +99,16 @@ class TestMigrationStrategy:
     """
 
     async def test_happy_path(self):
-        strategy = MyMigrationStrategy()
+        # here's some pre-processing, you can read some data, you can create relations, whatever
+        raw_data = _MySourceDataProvider().get_data()
+        survivors = await _MyFilter().apply(raw_data)
+        to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
+        strategy = MyMigrationStrategy(
+            source_data_set_to_bo4e_mapper=to_bo4e_mapper,
+            validation=_MyValidation(),
+            bo4e_to_target_mapper=_MyToTargetMapper(),
+            target_loader=_MyTargetLoader(),
+        )
         result = await strategy.migrate()
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)

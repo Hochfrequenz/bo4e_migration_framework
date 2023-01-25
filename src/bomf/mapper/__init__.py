@@ -6,40 +6,34 @@ from typing import Generic, List, TypeVar
 
 from bomf.model import Bo4eDataSet
 
-SourceDataModel = TypeVar("SourceDataModel")
-"""
-source data model is the data model of the source (meaning: the data model of the system from which the data originate)
-"""
-
 TargetDataModel = TypeVar("TargetDataModel")
 """
-target data model is the data model of the target (meaning: the data model of the system to which you'd like to migrate)
+Target data model is the data model of the target (meaning: the data model of the system to which you'd like to migrate)
 """
 
 IntermediateDataSet = TypeVar("IntermediateDataSet", bound=Bo4eDataSet)
 """
-intermediate data set is the BO4E based layer between source and target
+Intermediate data set is the BO4E based layer between source and target.
+It is based on BO4E.
 """
 
 
 # pylint:disable=too-few-public-methods
-class SourceToBo4eDataSetMapper(ABC, Generic[SourceDataModel, IntermediateDataSet]):
+class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     """
-    A mapper that loads data from a source into a Bo4eDataSet
+    A mapper that maps one or multiple sources into Bo4eDataSets
     """
 
-    @abstractmethod
-    def create_data_set(self, source: SourceDataModel) -> IntermediateDataSet:
-        """
-        maps the given source data model into an intermediate data set
-        """
+    # the inheriting class is free to combine and bundle the source data as it wants.
+    # the only thing it has to provide is a method to create_data_sets (in bo4e).
+    # we don't care from where it gets them in the first place
 
-    def create_data_sets(self, sources: List[SourceDataModel]) -> List[IntermediateDataSet]:
+    def create_data_sets(self) -> List[IntermediateDataSet]:
         """
-        apply the mapping to all the provided dataset
+        apply the mapping to all the provided source data sets.
+
         """
-        # here we could use some error handling in the future
-        return [self.create_data_set(source=source_data_model) for source_data_model in sources]
+        raise NotImplementedError("The inheriting class has to implement this method")
 
 
 # pylint:disable=too-few-public-methods
