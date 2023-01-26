@@ -37,4 +37,5 @@ class TestSourceDataProvider:
             {"myKey": "world", "qwe": "rtz"},
         ]
         assert example_json_data_provider.get_entry("world") == {"myKey": "world", "qwe": "rtz"}
-        assert example_json_data_provider.get_entry("something unknown") is None
+        with pytest.raises(KeyError):
+            _ = example_json_data_provider.get_entry("something unknown")
