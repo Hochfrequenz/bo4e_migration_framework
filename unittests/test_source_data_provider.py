@@ -11,7 +11,7 @@ class LegacyDataSystemDataProvider(SourceDataProvider):
     a dummy for access to a legacy system from which we want to migrate data
     """
 
-    def get_entry(self, key: KeyTyp) -> Optional[str]:
+    def get_entry(self, key: KeyTyp) -> str:
         raise NotImplementedError("Not relevant for this test")
 
     def get_data(self) -> List[str]:

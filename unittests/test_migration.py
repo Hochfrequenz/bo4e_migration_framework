@@ -33,7 +33,7 @@ class _MyIntermediateDataModel(Bo4eDataSet):
 
 
 class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
-    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
+    def get_entry(self, key: KeyTyp) -> SourceDataModel:
         raise NotImplementedError("Not relevant for the test")
 
     def get_data(self) -> List[_MySourceDataModel]:

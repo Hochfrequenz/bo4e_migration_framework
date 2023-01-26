@@ -30,9 +30,10 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
         """
 
     @abstractmethod
-    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
+    def get_entry(self, key: KeyTyp) -> SourceDataModel:
         """
-        returns the source data model which has key as key or None if not found
+        returns the source data model which has key as key.
+        raises an error if the key is unknown
         """
 
 
@@ -62,7 +63,5 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
     def get_data(self) -> List[SourceDataModel]:
         return self._source_data_models
 
-    def get_entry(self, key: KeyTyp) -> Optional[SourceDataModel]:
-        if key in self._key_to_data_model_mapping:
-            return self._key_to_data_model_mapping[key]
-        return None
+    def get_entry(self, key: KeyTyp) -> SourceDataModel:
+        return self._key_to_data_model_mapping[key]
