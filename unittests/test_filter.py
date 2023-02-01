@@ -118,7 +118,7 @@ class TestSourceDataProviderFilter:
             ),
         ],
     )
-    async def test_aggregate_filter(
+    async def test_source_data_provider_filter(
         self,
         candidate_filter: Filter[_MyCandidate],
         candidates: List[_MyCandidate],
@@ -136,3 +136,10 @@ class TestSourceDataProviderFilter:
         assert actual == survivors
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
         assert "There are 2 filtered aggregates left" in caplog.messages
+
+    async def test_source_data_provider_filter_error(self):
+        my_provider = ListBasedSourceDataProvider([{"foo": "bar"}, {"foo": "notbar"}], key_selector=lambda d: d["foo"])
+        del my_provider.key_selector
+        sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(_FooFilter())
+        with pytest.raises(ValueError):
+            await sdp_filter.apply(my_provider)
