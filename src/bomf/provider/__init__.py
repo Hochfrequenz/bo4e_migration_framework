@@ -15,6 +15,8 @@ KeyTyp = TypeVar("KeyTyp")
 """
 The type of the key used as "primary key" for the source data model
 """
+
+
 # pylint:disable=too-few-public-methods
 class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
     """
