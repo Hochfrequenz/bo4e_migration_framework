@@ -75,7 +75,7 @@ class Bo4eDataSet(ABC):
             return str(self._uuid)
         except AttributeError as attribute_error:
             if attribute_error.name == "_uuid" in str(attribute_error):
-                raise Exception(
+                raise ValueError(
                     f"You probably forgot to call super().__init()__ in the constructor of {self.__class__}"
                 ) from attribute_error
             raise
