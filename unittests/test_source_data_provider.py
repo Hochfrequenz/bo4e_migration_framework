@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pytest  # type:ignore[import]
 
-from bomf.provider import JsonFileSourceDataProvider, KeyTyp, SourceDataProvider
+from bomf.provider import JsonFileSourceDataProvider, KeyTyp, ListBasedSourceDataProvider, SourceDataProvider
 
 
 class LegacyDataSystemDataProvider(SourceDataProvider):
@@ -39,3 +39,10 @@ class TestSourceDataProvider:
         assert example_json_data_provider.get_entry("world") == {"myKey": "world", "qwe": "rtz"}
         with pytest.raises(KeyError):
             _ = example_json_data_provider.get_entry("something unknown")
+
+
+class TestListBasedSourceDataProvider:
+    def test_list_based_provider(self):
+        my_provider = ListBasedSourceDataProvider(["foo", "bar", "baz"], key_selector=lambda x: x)
+        assert len(my_provider.get_data()) == 3
+        assert my_provider.get_entry("bar") == "bar"

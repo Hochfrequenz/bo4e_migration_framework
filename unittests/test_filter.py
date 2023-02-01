@@ -6,6 +6,8 @@ from typing import List
 import pytest  # type:ignore[import]
 
 from bomf.filter import AggregateFilter, Filter
+from bomf.filter.sourcedataproviderfilter import SourceDataProviderFilter
+from bomf.provider import ListBasedSourceDataProvider, SourceDataProvider
 
 
 class _FooFilter(Filter):
@@ -95,6 +97,42 @@ class TestAggregateFilter:
     ):
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         actual = await filter_under_test.apply(candidates)
+        assert actual == survivors
+        assert "There are 4 candidates and 4 aggregates" in caplog.messages
+        assert "There are 2 filtered aggregates left" in caplog.messages
+
+
+class TestSourceDataProviderFilter:
+    @pytest.mark.parametrize(
+        "candidate_filter,candidates,survivors",
+        [
+            pytest.param(
+                _BarFilter(),
+                [
+                    _MyCandidate(number=1, string="foo"),
+                    _MyCandidate(number=19, string="bar"),
+                    _MyCandidate(number=2, string="foo"),
+                    _MyCandidate(number=17, string="bar"),
+                ],
+                [_MyCandidate(number=19, string="bar"), _MyCandidate(number=2, string="foo")],
+            ),
+        ],
+    )
+    async def test_aggregate_filter(
+        self,
+        candidate_filter: Filter[_MyCandidate],
+        candidates: List[_MyCandidate],
+        survivors: List[_MyCandidate],
+        caplog,
+    ):
+        my_provider: ListBasedSourceDataProvider[_MyCandidate, int] = ListBasedSourceDataProvider(
+            candidates, key_selector=lambda mc: mc.number
+        )
+        sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(candidate_filter)
+        caplog.set_level(logging.DEBUG, logger=self.__module__)
+        filtered_provider = await sdp_filter.apply(my_provider)
+        assert isinstance(filtered_provider, SourceDataProvider)
+        actual = filtered_provider.get_data()
         assert actual == survivors
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
         assert "There are 2 filtered aggregates left" in caplog.messages
