@@ -59,12 +59,11 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
         key_selector_to_be_used: Callable[[Candidate], KeyTyp]
         if key_selector is not None:
             key_selector_to_be_used = key_selector
-        elif hasattr(source_data_provider, "key_selector"):  # see JsonFileSourceDataProvider __init__
-            key_selector_to_be_used = source_data_provider.key_selector
         else:
-            raise ValueError(
-                "You have to provide either a JsonFileSourceDataProvider or specify the optional key_selector argument"
-            )
+            key_selector_to_be_used = source_data_provider.key_selector  # type:ignore[attr-defined]
+            # if this raises an attribute error you have to
+            # * either provide a source_data_provider which has a key_selector attribute
+            # * or explicitly provide a key_selector as (non-None) argument
         filtered_data_provider_class = ListBasedSourceDataProvider(
             source_data_models=survivors, key_selector=key_selector_to_be_used
         )

@@ -141,5 +141,5 @@ class TestSourceDataProviderFilter:
         my_provider = ListBasedSourceDataProvider([{"foo": "bar"}, {"foo": "notbar"}], key_selector=lambda d: d["foo"])
         del my_provider.key_selector
         sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(_FooFilter())
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             await sdp_filter.apply(my_provider)
