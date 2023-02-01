@@ -4,7 +4,7 @@ providers provide data
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Generic, List, Mapping, Optional, TypeVar, Union
+from typing import Callable, Generic, List, Mapping, Optional, Protocol, TypeVar, Union
 
 SourceDataModel = TypeVar("SourceDataModel")
 """
@@ -39,6 +39,26 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
         """
 
 
+class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
+    """
+    A source data provider that is instantiated with a list of source data models
+    """
+
+    def __init__(self, source_data_models: List[SourceDataModel], key_selector: Callable[[SourceDataModel], KeyTyp]):
+        """
+        instantiate it by providing a list of source data models
+        """
+        self._models: List[SourceDataModel] = source_data_models
+        self._models_dict: Mapping[KeyTyp, SourceDataModel] = {key_selector(m): m for m in source_data_models}
+        self.key_selector = key_selector
+
+    def get_entry(self, key: KeyTyp) -> SourceDataModel:
+        return self._models_dict[key]
+
+    def get_data(self) -> List[SourceDataModel]:
+        return self._models
+
+
 class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Generic[SourceDataModel, KeyTyp]):
     """
     a source data model provider that is based on a JSON file
@@ -61,6 +81,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
         self._key_to_data_model_mapping: Mapping[KeyTyp, SourceDataModel] = {
             key_selector(sdm): sdm for sdm in self._source_data_models
         }
+        self.key_selector = key_selector
 
     def get_data(self) -> List[SourceDataModel]:
         return self._source_data_models
