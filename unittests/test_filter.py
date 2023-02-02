@@ -5,7 +5,7 @@ from typing import List
 
 import pytest  # type:ignore[import]
 
-from bomf.filter import AggregateFilter, Filter
+from bomf.filter import AggregateFilter, AllowlistFilter, BlocklistFilter, Filter
 from bomf.filter.sourcedataproviderfilter import SourceDataProviderFilter
 from bomf.provider import ListBasedSourceDataProvider, SourceDataProvider
 
@@ -101,6 +101,20 @@ class TestAggregateFilter:
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
         assert "There are 2 filtered aggregates left" in caplog.messages
 
+class TestBlockAndAllowlistFilter:
+    async def test_allowlist_filter(self):
+        allowlist = {"A", "B", "C"}
+        candidates = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        allowlist_filter = AllowlistFilter(lambda c:c["foo"], allowlist)
+        actual = await allowlist_filter.apply(candidates)
+        assert actual == [{"foo": "A"}, {"foo": "B"}]
+
+    async def test_blocklist_filter(self):
+        blocklist = {"A", "B", "C"}
+        candidates = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        allowlist_filter = BlocklistFilter(lambda c:c["foo"], blocklist)
+        actual = await allowlist_filter.apply(candidates)
+        assert actual == [{"foo": "Z"}]
 
 class TestSourceDataProviderFilter:
     @pytest.mark.parametrize(

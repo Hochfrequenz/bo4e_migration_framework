@@ -7,7 +7,7 @@ filters can be used to consider only those objects for a migration that meet cer
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Awaitable, Generic, List, TypeVar
+from typing import Awaitable, Callable, Generic, List, Set, TypeVar
 
 Candidate = TypeVar("Candidate")  #: an arbitrary but fixed type on which the filter operates
 
@@ -99,3 +99,40 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         filtered_aggregates = await self._base_filter.apply(aggregates)
         self._logger.info("There are %i filtered aggregates left", len(filtered_aggregates))
         return [self.disaggregate(fa) for fa in filtered_aggregates]
+
+CandidateProperty = TypeVar("CandidateProperty")
+class HardcodedFilter(Filter,ABC, Generic[CandidateProperty]):
+    """
+    a harcoded filter filters on a hardcoded list of allowed/blocked values (formerly known as white- and blacklist)
+    """
+    def __init__(self, criteria_selector:Callable[[Filter], CandidateProperty], values:Set[CandidateProperty]):
+        """
+        instantiate by providing a criteria selector that returns a property on which we can filter and a set of values.
+        Whether the values are used as allowed or not allowed (block) depends on the inheriting class
+        """
+        super().__init__()
+        self._criteria_selector = criteria_selector
+        self._values = values
+
+class BlocklistFilter(HardcodedFilter):
+    """
+    remove those candidates whose property is in the provided blocklist
+    """
+
+    async def predicate(self, candidate: Candidate) -> bool:
+        candidate_property = self._criteria_selector(candidate)
+        result = candidate_property not in self._values
+        if result is False:
+            self._logger.debug("'%s' is in the blocklist", candidate_property)
+        return result
+class AllowlistFilter(HardcodedFilter):
+    """
+    let those candidates pass, whose property is in the provided allowlist
+    """
+
+    async def predicate(self, candidate: Candidate) -> bool:
+        candidate_property = self._criteria_selector(candidate)
+        result = candidate_property in self._values
+        if result is False:
+            self._logger.debug("'%s' is not in the allowlist", candidate_property)
+        return result
