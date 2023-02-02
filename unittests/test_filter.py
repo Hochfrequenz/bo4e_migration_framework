@@ -5,7 +5,7 @@ from typing import List
 
 import pytest  # type:ignore[import]
 
-from bomf.filter import AggregateFilter, Filter
+from bomf.filter import AggregateFilter, AllowlistFilter, BlocklistFilter, Filter
 from bomf.filter.sourcedataproviderfilter import SourceDataProviderFilter
 from bomf.provider import ListBasedSourceDataProvider, SourceDataProvider
 
@@ -100,6 +100,22 @@ class TestAggregateFilter:
         assert actual == survivors
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
         assert "There are 2 filtered aggregates left" in caplog.messages
+
+
+class TestBlockAndAllowlistFilter:
+    async def test_allowlist_filter(self):
+        allowlist = {"A", "B", "C"}
+        candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        allowlist_filter: AllowlistFilter[dict[str, str], str] = AllowlistFilter(lambda c: c["foo"], allowlist)
+        actual = await allowlist_filter.apply(candidates)
+        assert actual == [{"foo": "A"}, {"foo": "B"}]
+
+    async def test_blocklist_filter(self):
+        blocklist = {"A", "B", "C"}
+        candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        blocklist_filter: BlocklistFilter[dict[str, str], str] = BlocklistFilter(lambda c: c["foo"], blocklist)
+        actual = await blocklist_filter.apply(candidates)
+        assert actual == [{"foo": "Z"}]
 
 
 class TestSourceDataProviderFilter:
