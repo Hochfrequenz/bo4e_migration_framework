@@ -2,6 +2,7 @@
 providers provide data
 """
 import json
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, Generic, List, Mapping, Optional, Protocol, TypeVar, Union
@@ -50,6 +51,9 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
         """
         self._models: List[SourceDataModel] = source_data_models
         self._models_dict: Mapping[KeyTyp, SourceDataModel] = {key_selector(m): m for m in source_data_models}
+        logging.getLogger(self.__module__).info(
+            "Read %i records from %s", len(self._models_dict), str(source_data_models)
+        )
         self.key_selector = key_selector
 
     def get_entry(self, key: KeyTyp) -> SourceDataModel:

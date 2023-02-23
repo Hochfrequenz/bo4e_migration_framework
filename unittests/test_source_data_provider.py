@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List
 
@@ -42,7 +43,9 @@ class TestSourceDataProvider:
 
 
 class TestListBasedSourceDataProvider:
-    def test_list_based_provider(self):
+    def test_list_based_provider(self, caplog):
+        caplog.set_level(logging.DEBUG, logger=ListBasedSourceDataProvider.__module__)
         my_provider = ListBasedSourceDataProvider(["foo", "bar", "baz"], key_selector=lambda x: x)
         assert len(my_provider.get_data()) == 3
         assert my_provider.get_entry("bar") == "bar"
+        assert "Read 3 records from ['foo', 'bar', 'baz']" in caplog.messages
