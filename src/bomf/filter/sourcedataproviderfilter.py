@@ -22,7 +22,9 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
         self._filter = candidate_filter
 
     @overload
-    async def apply(self, source_data_provider: JsonFileSourceDataProvider[Candidate,KeyTyp]) -> SourceDataProvider[Candidate, KeyTyp]:
+    async def apply(
+        self, source_data_provider: JsonFileSourceDataProvider[Candidate, KeyTyp]
+    ) -> SourceDataProvider[Candidate, KeyTyp]:
         ...
 
     @overload
