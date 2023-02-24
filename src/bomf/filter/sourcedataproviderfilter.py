@@ -8,6 +8,7 @@ from bomf import KeyTyp, SourceDataProvider
 from bomf.filter import Candidate, Filter
 from bomf.provider import JsonFileSourceDataProvider, ListBasedSourceDataProvider
 
+ASourceDataProvider = SourceDataProvider[Candidate, KeyTyp]
 
 # pylint:disable=too-few-public-methods
 class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
@@ -37,6 +38,10 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
     async def apply(
         self, source_data_provider: SourceDataProvider[Candidate, KeyTyp]
     ) -> SourceDataProvider[Candidate, KeyTyp]:
+        ...
+
+    @overload
+    async def apply(self, source_data_provider: ASourceDataProvider) -> ASourceDataProvider:
         ...
 
     @overload
