@@ -45,6 +45,12 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
     ) -> SourceDataProvider[Candidate, KeyTyp]:
         ...
 
+    @overload
+    async def apply(
+        self, source_data_provider: SourceDataProvider[Candidate, KeyTyp], key_selector: Literal[None]
+    ) -> SourceDataProvider[Candidate, KeyTyp]:
+        ...
+
     async def apply(
         self,
         source_data_provider: SourceDataProvider[Candidate, KeyTyp],
