@@ -10,7 +10,7 @@ from bomf.filter.sourcedataproviderfilter import SourceDataProviderFilter
 from bomf.provider import ListBasedSourceDataProvider, SourceDataProvider
 
 
-class _FooFilter(Filter):
+class _FooFilter(Filter[dict]):
     async def predicate(self, candidate: dict) -> bool:
         return "foo" in candidate and candidate["foo"] == "bar"
 
@@ -154,8 +154,10 @@ class TestSourceDataProviderFilter:
         assert "There are 2 filtered aggregates left" in caplog.messages
 
     async def test_source_data_provider_filter_error(self):
-        my_provider = ListBasedSourceDataProvider([{"foo": "bar"}, {"foo": "notbar"}], key_selector=lambda d: d["foo"])
+        my_provider: ListBasedSourceDataProvider[dict, str] = ListBasedSourceDataProvider(
+            [{"foo": "bar"}, {"foo": "notbar"}], key_selector=lambda d: d["foo"]
+        )
         del my_provider.key_selector
-        sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(_FooFilter())
+        sdp_filter: SourceDataProviderFilter[dict, str] = SourceDataProviderFilter(_FooFilter())
         with pytest.raises(AttributeError):
             await sdp_filter.apply(my_provider)
