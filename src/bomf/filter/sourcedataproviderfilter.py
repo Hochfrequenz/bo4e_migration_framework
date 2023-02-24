@@ -35,6 +35,12 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
 
     @overload
     async def apply(
+        self, source_data_provider: SourceDataProvider[Candidate, KeyTyp]
+    ) -> SourceDataProvider[Candidate, KeyTyp]:
+        ...
+
+    @overload
+    async def apply(
         self, source_data_provider: JsonFileSourceDataProvider[Candidate, KeyTyp], key_selector: Literal[None]
     ) -> SourceDataProvider[Candidate, KeyTyp]:
         ...
