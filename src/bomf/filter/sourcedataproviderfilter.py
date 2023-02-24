@@ -10,6 +10,7 @@ from bomf.provider import JsonFileSourceDataProvider, ListBasedSourceDataProvide
 
 ASourceDataProvider = SourceDataProvider[Candidate, KeyTyp]
 
+
 # pylint:disable=too-few-public-methods
 class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
     """
