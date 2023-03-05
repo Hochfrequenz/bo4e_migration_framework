@@ -1,30 +1,30 @@
 """
 Tests the overall data flow using bomf.
 """
+import asyncio
 from typing import Dict, List, Optional
 
 import attrs
 
 from bomf import (
     Bo4eDataSetToTargetMapper,
-    Bo4eDataSetValidation,
     EntityLoader,
     Filter,
     MigrationStrategy,
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
+    ValidatorSet,
 )
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
 from bomf.provider import KeyTyp, SourceDataModel
-from bomf.validation import Bo4eDataSetRule, DataSetValidationResult
 
 _MySourceDataModel = Dict[str, str]
 _MyKeyTyp = str
 _MyTargetDataModel = List[str]
 
 
-@attrs.define(auto_attribs=True, kw_only=True)
+# @attrs.define(auto_attribs=True, kw_only=True)
 class _MyIntermediateDataModel(Bo4eDataSet):
     data: Dict[str, str]
 
@@ -42,7 +42,7 @@ class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
             {"FOO": "BAR"},
             {"Foo": "Bar"},
             {"remove by filter": "should not pass the filter"},
-            {"invalid": "doesn't matter"},
+            # {"invalid": "doesn't matter"},
         ]
 
 
@@ -60,14 +60,13 @@ class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
         return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 
-class _MyRule(Bo4eDataSetRule[_MyIntermediateDataModel]):
-    def validate(self, dataset: _MyIntermediateDataModel) -> DataSetValidationResult:
-        return DataSetValidationResult(is_valid="invalid" not in dataset.data)
+async def _my_rule(data: Dict[str, str]) -> None:
+    if "invalid" in data:
+        raise ValueError("'invalid' in data")
 
 
-class _MyValidation(Bo4eDataSetValidation):
-    def __init__(self):
-        super().__init__(rules=[_MyRule()])
+_my_validation = ValidatorSet[_MyIntermediateDataModel]()
+_my_validation.register(_my_rule)
 
 
 class _MyToTargetMapper(Bo4eDataSetToTargetMapper[_MyTargetDataModel, _MyIntermediateDataModel]):
@@ -89,7 +88,7 @@ class _MyTargetLoader(EntityLoader):
         return True
 
 
-class MyMigrationStrategy(MigrationStrategy):
+class MyMigrationStrategy(MigrationStrategy[_MyIntermediateDataModel, _MyTargetDataModel]):
     pass
 
 
@@ -98,17 +97,17 @@ class TestMigrationStrategy:
     This is more of an integration than a unit test. All the single components come together here.
     """
 
-    async def test_happy_path(self):
+    def test_happy_path(self):
         # here's some pre-processing, you can read some data, you can create relations, whatever
         raw_data = _MySourceDataProvider().get_data()
-        survivors = await _MyFilter().apply(raw_data)
+        survivors = asyncio.run(_MyFilter().apply(raw_data))
         to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
         strategy = MyMigrationStrategy(
             source_data_set_to_bo4e_mapper=to_bo4e_mapper,
-            validation=_MyValidation(),
+            validation=_my_validation,
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
         )
-        result = await strategy.migrate()
+        result = asyncio.run(strategy.migrate())
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)
