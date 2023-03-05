@@ -11,7 +11,9 @@ bo4e==0.4.4
 iso3166==2.1.1
     # via bo4e
 pydantic==1.10.2
-    # via bo4e
+    # via
+    #   -r requirements.in
+    #   bo4e
 pyhumps==3.8.0
     # via bo4e
 typing-extensions==4.4.0
