@@ -1,119 +1,180 @@
-import logging
-from itertools import cycle
-from typing import Iterable, Optional, Type
+import asyncio
+from datetime import timedelta
 
-import pytest  # type:ignore[import]
-from bo4e.bo.geschaeftspartner import Geschaeftspartner
-from bo4e.bo.marktlokation import Marktlokation
-from bo4e.enum.verbrauchsart import Verbrauchsart
+import pytest
 
-from bomf.model import Bo4eDataSet, Bo4eTyp, BusinessObjectRelation
-from bomf.validation import Bo4eDataSetRule, Bo4eDataSetValidation, DataSetTyp, DataSetValidationResult
+from bomf.model import Bo4eDataSet
+from bomf.validation import ValidatorSet, ValidatorType
 
 
-class GeschaeftspartnerMesslokatinDataSet(Bo4eDataSet):
-    """
-    a dummy data set which contains a Geschaeftspartner and a Messlokation
-    """
-
-    def __init__(self, geschaeftspartner: Geschaeftspartner, marktlokation: Marktlokation):
-        super().__init__()
-        self._gp = geschaeftspartner
-        self._malo = marktlokation
-
-    def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
-        if bo_type == Geschaeftspartner:
-            return self._gp
-        if bo_type == Marktlokation:
-            return self._malo
-        raise NotImplementedError("Not relevant for this test")
-
-    def get_relations(self) -> Iterable[BusinessObjectRelation]:
-        raise NotImplementedError("Not relevant for this test")
-
-    def get_id(self) -> str:
-        return self._malo.marktlokations_id
+class DataSetTest(Bo4eDataSet):
+    x: str
+    y: int
 
 
-class DontMigrateCustomersWithVornameKlausAndWaermenutzung(Bo4eDataSetRule):
-    """
-    This test should show that the validations act on a whole data set that consists of multiple objects.
-    The validations are thought to catch inconsitencies between the objects while the (source data) filters should
-    be responsible for single objects only.
-    """
-
-    def validate(self, dataset: GeschaeftspartnerMesslokatinDataSet) -> DataSetValidationResult:
-        customer: Geschaeftspartner = dataset.get_business_object(Geschaeftspartner)
-        malo: Marktlokation = dataset.get_business_object(Marktlokation)
-        forbidden_verbrauchsarts_for_Klaus = (Verbrauchsart.W, Verbrauchsart.WS, Verbrauchsart.KLW, Verbrauchsart.KLWS)
-        if customer.name2 == "Klaus" and malo.verbrauchsart in forbidden_verbrauchsarts_for_Klaus:
-            return DataSetValidationResult(is_valid=False, error_message="hier die fehlermeldung")
-        return DataSetValidationResult(is_valid=True)
-
-    def __str__(self):
-        return "Kein Klaus mit Wärme"
+dataset_instance = DataSetTest(x="lo16", y=16)
+finishing_order: list[ValidatorType]
 
 
-class ARuleThatCrashesInOneOutOfFourTimesForDemoPurposes(Bo4eDataSetRule):
-    def __init__(self):
-        self._should_crash = cycle([False, False, True, False])
-
-    def validate(self, dataset: DataSetTyp) -> DataSetValidationResult:
-        should_crash = next(self._should_crash)
-        if should_crash:
-            raise Exception("something went terribly wrong")
-        return DataSetValidationResult(is_valid=True)
-
-    def __str__(self):
-        return "schlecht programmiert"
+async def check_x_expensive(x: str) -> None:
+    await asyncio.sleep(0.3)
+    finishing_order.append(check_x_expensive)
 
 
-class MyValidation(Bo4eDataSetValidation):
-    """
-    all the validation rules I'd like the datasets to obey
-    """
+async def check_y_positive(y: int) -> None:
+    if y < 0:
+        raise ValueError("y is not positive")
+    finishing_order.append(check_y_positive)
 
-    def __init__(self):
-        super().__init__(
-            rules=[
-                DontMigrateCustomersWithVornameKlausAndWaermenutzung(),
-                ARuleThatCrashesInOneOutOfFourTimesForDemoPurposes(),
-            ]
-        )
+
+async def check_xy_ending(x: str, y: int) -> None:
+    if not x.endswith(str(y)):
+        raise ValueError("x does not end with y")
+    finishing_order.append(check_xy_ending)
+
+
+async def check_fail(x: str) -> None:
+    raise ValueError("I failed (on purpose! :O)")
+
+
+async def check_fail2(y: int) -> None:
+    raise ValueError("I failed (on purpose! :O - again :OOO)")
+
+
+async def check_fail3(y: int) -> None:
+    raise ValueError("This shouldn't be raised")
+
+
+async def incorrectly_annotated(x: str):
+    pass
+
+
+async def incorrectly_annotated2(x: str, y) -> None:
+    pass
+
+
+async def incorrectly_annotated3(x: str, z: str) -> None:
+    pass
+
+
+async def incorrectly_annotated4(x: str, y: str) -> None:
+    pass
+
+
+def not_async(x: str) -> None:
+    pass
 
 
 class TestValidation:
-    def test_validation(self, caplog):
-        candidates = [
-            GeschaeftspartnerMesslokatinDataSet(
-                # valid, because verbrauchsart is no Wärme (W)
-                marktlokation=Marktlokation.construct(marktlokations_id="53502368955", verbrauchsart=Verbrauchsart.KL),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Klaus"),
+    async def test_async_validation(self):
+        """
+        This test checks if the validation functions run concurrently by just ensuring that the expensive task
+        (simulated with sleep) will finish always at last.
+        """
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_x_expensive)
+        validator_set.register(check_y_positive)
+        await validator_set.validate(dataset_instance)
+        assert finishing_order == [check_y_positive, check_x_expensive]
+
+    async def test_depend_validation(self):
+        """
+        This test checks if the feature to define a dependent check works properly.
+        This is achieved by setting up a validation function depending on an expensive task. The expensive task
+        should finish first.
+        """
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_x_expensive)
+        validator_set.register(check_xy_ending, depends_on=[check_x_expensive])
+        await validator_set.validate(dataset_instance)
+        assert finishing_order == [check_x_expensive, check_xy_ending]
+
+    async def test_depend_and_async_validation(self):
+        """
+        This test is a mix of the previous two and checks if the finishing order is as expected.
+        """
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_x_expensive)
+        validator_set.register(check_y_positive)
+        validator_set.register(check_xy_ending, depends_on=[check_x_expensive, check_y_positive])
+        await validator_set.validate(dataset_instance)
+        assert finishing_order == [check_y_positive, check_x_expensive, check_xy_ending]
+
+    async def test_failing_validation(self):
+        """
+        Tests if a failing validation behaves as expected.
+        """
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_y_positive)
+        validator_set.register(check_fail)
+        validator_set.register(check_fail2)
+        validator_set.register(check_fail3, depends_on=[check_fail])
+        with pytest.raises(ExceptionGroup) as error_group:
+            await validator_set.validate(dataset_instance)
+
+        sub_exception_msgs = {str(exception) for exception in error_group.value.exceptions}
+        assert any("I failed (on purpose! :O)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs)
+        assert any(
+            "I failed (on purpose! :O - again :OOO)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs
+        )
+        assert any(
+            "Execution abandoned due to uncaught exceptions in dependent validators" in sub_exception_msg
+            for sub_exception_msg in sub_exception_msgs
+        )
+        assert len(sub_exception_msgs) == 3
+
+    @pytest.mark.parametrize(
+        ["validator_func", "expected_error"],
+        [
+            pytest.param(
+                incorrectly_annotated,
+                "Incorrectly annotated validator function: The return type must be 'None'.",
+                id="Missing return type",
             ),
-            GeschaeftspartnerMesslokatinDataSet(
-                # invalid, because verbrauchsart is also Wärme (W)
-                marktlokation=Marktlokation.construct(marktlokations_id="87301147632", verbrauchsart=Verbrauchsart.KLW),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Klaus"),
+            pytest.param(
+                incorrectly_annotated2,
+                "Incorrectly annotated validator function: Arguments ['y'] have no type annotation.",
+                id="Missing 1/2 argument type",
             ),
-            GeschaeftspartnerMesslokatinDataSet(
-                # valid, because vorname is not Klaus but crashes in the second rule
-                marktlokation=Marktlokation.construct(marktlokations_id="78192756766", verbrauchsart=Verbrauchsart.W),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Günther"),
+            pytest.param(
+                incorrectly_annotated3,
+                "Argument 'z' does not exist as field in the DataSet "
+                "'<class 'unittests.test_validation.DataSetTest'>'.",
+                id="Argument does not exist in dataset",
             ),
-            GeschaeftspartnerMesslokatinDataSet(
-                # valid, because vorname is not Klaus - no crash
-                marktlokation=Marktlokation.construct(marktlokations_id="18410127695", verbrauchsart=Verbrauchsart.W),
-                geschaeftspartner=Geschaeftspartner.construct(name2="Klause"),
+            pytest.param(
+                incorrectly_annotated4,
+                "Incorrectly annotated validator function: The annotated type of argument 'y' mismatches the type "
+                "in the DataSet: '<class 'str'>' != '<class 'int'>'",
+                id="Wrong argument type",
             ),
-        ]
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
-        my_validation = MyValidation()
-        validation_result = my_validation.validate(candidates)
-        assert len(validation_result.valid_entries) == 2
-        assert len(validation_result.invalid_entries) == 2
-        assert "dataset 53502368955 obeys the rule 'Kein Klaus mit Wärme'" in caplog.messages
-        assert "✔ data set 53502368955 is valid" in caplog.messages
-        assert "dataset 87301147632 does not obey: 'hier die fehlermeldung'" in caplog.messages
-        assert "❌ data set 78192756766 is invalid" in caplog.messages
-        assert "Validation of rule 'schlecht programmiert' on dataset 78192756766 failed" in caplog.messages
-        assert "❌ data set 78192756766 is invalid" in caplog.messages
+            pytest.param(
+                not_async,
+                "The provided validator function has to be a coroutine (e.g. use async).",
+                id="Function not async",
+            ),
+        ],
+    )
+    async def test_illegal_validator_functions(self, validator_func: ValidatorType, expected_error: str):
+        validator_set = ValidatorSet[DataSetTest]()
+        with pytest.raises(ValueError) as error:
+            validator_set.register(validator_func)
+
+        assert str(error.value) == expected_error
+
+    async def test_timeout(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_x_expensive, timeout=timedelta(milliseconds=100))
+        with pytest.raises(ExceptionGroup) as error_group:
+            await validator_set.validate(dataset_instance)
+        sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
+        assert len(sub_exception_msgs) == 1
+        assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]

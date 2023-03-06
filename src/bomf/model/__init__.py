@@ -3,12 +3,13 @@ general data models for migrations
 """
 import enum
 import uuid
-from abc import ABC, abstractmethod
-from typing import Iterable, Optional, Type, TypeVar, Union
+from abc import ABC
+from typing import TypeVar, Union
 
 import attrs
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
+from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 
 _SpecificBusinessObject = TypeVar("_SpecificBusinessObject", bound=Geschaeftsobjekt)
 """
@@ -57,13 +58,12 @@ class BusinessObjectRelation:
     """
 
 
-class Bo4eDataSet(ABC):
+class Bo4eDataSet(BaseModel, ABC):
     """
     A BO4E data set is a collection of Business Objects that relate to each other.
     """
 
-    def __init__(self):
-        self._uuid = uuid.uuid4()
+    _uuid: uuid.UUID = Field(default_factory=uuid.uuid4)
 
     def get_id(self) -> str:
         """
