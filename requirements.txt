@@ -10,7 +10,7 @@ bo4e==0.4.4
     # via -r requirements.in
 iso3166==2.1.1
     # via bo4e
-pydantic==1.10.2
+pydantic==1.10.5
     # via
     #   -r requirements.in
     #   bo4e
