@@ -6,7 +6,7 @@
 #
 attrs==22.2.0
     # via -r requirements.in
-bo4e==0.4.4
+bo4e==0.4.7
     # via -r requirements.in
 iso3166==2.1.1
     # via bo4e
