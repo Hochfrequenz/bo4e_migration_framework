@@ -218,6 +218,7 @@ class ValidatorSet(Generic[DataSetT]):
                     validator_infos.timeout.total_seconds() if validator_infos.timeout is not None else None,
                 )
             except TimeoutError as error:
+                assert validator_infos.timeout is not None  # This shouldn't happen, but type checker cries
                 error_handler.catch(
                     f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution of "
                     f"validator '{validator_func.__name__}'",
