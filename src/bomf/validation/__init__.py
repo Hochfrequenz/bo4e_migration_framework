@@ -228,7 +228,7 @@ class ValidatorSet(Generic[DataSetT]):
 
         task_schedule[validator_func] = task_group.create_task(_wrapper())
 
-    async def validate_async(self, *data_sets: DataSetT) -> None:
+    async def validate(self, *data_sets: DataSetT) -> None:
         """
         Apparently, this function has to be async if we want to use async statements inside it. But I don't want
         the validate function to be async, so I used this little workaround.
@@ -253,12 +253,3 @@ class ValidatorSet(Generic[DataSetT]):
                     f"Validation errors for {data_set.__class__.__name__}(id={data_set.get_id()})",
                     list(error_handler.excs.values()),
                 )
-
-    def validate(self, *data_sets: DataSetT) -> None:
-        """
-        Validates each of the provided data set instances onto the registered validator functions.
-        Any errors occurring during validation will be collected and raised together as ExceptionGroup.
-        If a validator depends on other validators which are raising errors, the execution of this validator will be
-        abandoned.
-        """
-        asyncio.run(self.validate_async(*data_sets))

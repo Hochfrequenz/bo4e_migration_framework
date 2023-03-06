@@ -96,10 +96,10 @@ class TestMigrationStrategy:
     This is more of an integration than a unit test. All the single components come together here.
     """
 
-    def test_happy_path(self):
+    async def test_happy_path(self):
         # here's some pre-processing, you can read some data, you can create relations, whatever
         raw_data = _MySourceDataProvider().get_data()
-        survivors = asyncio.run(_MyFilter().apply(raw_data))
+        survivors = await _MyFilter().apply(raw_data)
         to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
         strategy = MyMigrationStrategy(
             source_data_set_to_bo4e_mapper=to_bo4e_mapper,
@@ -107,6 +107,6 @@ class TestMigrationStrategy:
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
         )
-        result = asyncio.run(strategy.migrate())
+        result = await strategy.migrate()
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)

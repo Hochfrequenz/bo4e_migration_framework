@@ -65,7 +65,7 @@ def not_async(x: str) -> None:
 
 
 class TestValidation:
-    def test_async_validation(self):
+    async def test_async_validation(self):
         """
         This test checks if the validation functions run concurrently by just ensuring that the expensive task
         (simulated with sleep) will finish always at last.
@@ -75,10 +75,10 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive)
         validator_set.register(check_y_positive)
-        validator_set.validate(dataset_instance)
+        await validator_set.validate(dataset_instance)
         assert finishing_order == [check_y_positive, check_x_expensive]
 
-    def test_depend_validation(self):
+    async def test_depend_validation(self):
         """
         This test checks if the feature to define a dependent check works properly.
         This is achieved by setting up a validation function depending on an expensive task. The expensive task
@@ -89,10 +89,10 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive)
         validator_set.register(check_xy_ending, depends_on=[check_x_expensive])
-        validator_set.validate(dataset_instance)
+        await validator_set.validate(dataset_instance)
         assert finishing_order == [check_x_expensive, check_xy_ending]
 
-    def test_depend_and_async_validation(self):
+    async def test_depend_and_async_validation(self):
         """
         This test is a mix of the previous two and checks if the finishing order is as expected.
         """
@@ -102,10 +102,10 @@ class TestValidation:
         validator_set.register(check_x_expensive)
         validator_set.register(check_y_positive)
         validator_set.register(check_xy_ending, depends_on=[check_x_expensive, check_y_positive])
-        validator_set.validate(dataset_instance)
+        await validator_set.validate(dataset_instance)
         assert finishing_order == [check_y_positive, check_x_expensive, check_xy_ending]
 
-    def test_failing_validation(self):
+    async def test_failing_validation(self):
         """
         Tests if a failing validation behaves as expected.
         """
@@ -117,7 +117,7 @@ class TestValidation:
         validator_set.register(check_fail2)
         validator_set.register(check_fail3, depends_on=[check_fail])
         with pytest.raises(ExceptionGroup) as error_group:
-            validator_set.validate(dataset_instance)
+            await validator_set.validate(dataset_instance)
 
         sub_exception_msgs = {str(exception) for exception in error_group.value.exceptions}
         assert any("I failed (on purpose! :O)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs)
@@ -162,18 +162,18 @@ class TestValidation:
             ),
         ],
     )
-    def test_illegal_validator_functions(self, validator_func: ValidatorType, expected_error: str):
+    async def test_illegal_validator_functions(self, validator_func: ValidatorType, expected_error: str):
         validator_set = ValidatorSet[DataSetTest]()
         with pytest.raises(ValueError) as error:
             validator_set.register(validator_func)
 
         assert str(error.value) == expected_error
 
-    def test_timeout(self):
+    async def test_timeout(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive, timeout=0.1)
         with pytest.raises(ExceptionGroup) as error_group:
-            validator_set.validate(dataset_instance)
+            await validator_set.validate(dataset_instance)
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
         assert len(sub_exception_msgs) == 1
         assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
