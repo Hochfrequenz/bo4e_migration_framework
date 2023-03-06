@@ -168,3 +168,12 @@ class TestValidation:
             validator_set.register(validator_func)
 
         assert str(error.value) == expected_error
+
+    def test_timeout(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_x_expensive, timeout=0.1)
+        with pytest.raises(ExceptionGroup) as error_group:
+            validator_set.validate(dataset_instance)
+        sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
+        assert len(sub_exception_msgs) == 1
+        assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
