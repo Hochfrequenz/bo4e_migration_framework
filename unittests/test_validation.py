@@ -126,7 +126,7 @@ class TestValidation:
             "I failed (on purpose! :O - again :OOO)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs
         )
         assert any(
-            "Execution abandoned due to uncaught exceptions in dependant validators" in sub_exception_msg
+            "Execution abandoned due to uncaught exceptions in dependent validators" in sub_exception_msg
             for sub_exception_msg in sub_exception_msgs
         )
         assert len(sub_exception_msgs) == 3
