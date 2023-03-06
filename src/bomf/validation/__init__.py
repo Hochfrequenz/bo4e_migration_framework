@@ -123,7 +123,7 @@ class ValidatorSet(Generic[DataSetType]):
                 raise ValueError(
                     "Incorrectly annotated validator function: "
                     f"The annotated type of argument '{name}' mismatches the type in the DataSet: "
-                    f"'{arg_type}' != '{self.data_set_type.__annotations__[name]}'"
+                    f"'{arg_type}' != '{dataset_annotations[name]}'"
                 )
 
         _logger.debug(f"Registered validator function: {validator_func.__name__}")
@@ -234,65 +234,3 @@ class ValidatorSet(Generic[DataSetType]):
         Validates the provided data set instances onto the registered validator functions. If any error occures
         """
         asyncio.run(self.validate_async(*data_sets))
-
-
-# @attrs.define(kw_only=True, auto_attribs=True)
-# class _ValidAndInvalidEntities(Generic[DataSetTyp]):
-#     """
-#     A container type that holds both the invalid and the valid entries.
-#     """
-#
-#     # This class is only used internally and shouldn't be imported elsewhere. That's why its clunky name doesn't matter.
-#
-#     valid_entries: List[DataSetTyp] = attrs.field(default=attrs.Factory(list))
-#     """
-#     those entries that are valid and may pass on to the loader
-#     """
-#     invalid_entries: List[Tuple[DataSetTyp, List[str]]] = attrs.field(default=attrs.Factory(list))
-#     """
-#     those entries that are invalid together with their respective error messages
-#     """
-#
-#
-# @attrs.define(kw_only=True, auto_attribs=True)
-# class Bo4eDataSetValidation(ABC, Generic[DataSetTyp]):
-#     """
-#     A Bo4e Dataset Validation consists of multiple rules that are checked one after another.
-#     """
-#
-#     rules: List[Bo4eDataSetRule[DataSetTyp]] = attrs.field()
-#     """
-#     the rules which a single data set should obey
-#     """
-#
-#     def validate(self, datasets: Iterable[DataSetTyp]) -> _ValidAndInvalidEntities:
-#         """
-#         applies all rules to all datasets
-#         """
-#         _logger = logging.getLogger(self.__module__)
-#         result: _ValidAndInvalidEntities[DataSetTyp] = _ValidAndInvalidEntities()
-#         for dataset in datasets:
-#             dataset_id = dataset.get_id()
-#             error_messages: List[str] = []
-#             for rule in self.rules:
-#                 validation_result: DataSetValidationResult
-#                 try:
-#                     validation_result = rule.validate(dataset)
-#                 except Exception:  # pylint:disable=broad-except # pokemon catcher is intended
-#                     error_message = f"Validation of rule '{rule}' on dataset {dataset_id} failed"
-#                     _logger.exception(error_message, exc_info=True)
-#                     error_messages.append(error_message)
-#                     continue
-#                 if validation_result.is_valid:
-#                     _logger.debug("dataset %s obeys the rule '%s'", dataset_id, str(rule))
-#                 else:
-#                     _logger.debug("dataset %s does not obey: '%s'", dataset_id, validation_result.error_message)
-#                     error_messages.append(validation_result.error_message or "<no error message provided>")
-#             if len(error_messages) == 0:
-#                 result.valid_entries.append(dataset)
-#                 _logger.info("✔ data set %s is valid", dataset_id)
-#             else:
-#                 result.invalid_entries.append((dataset, error_messages))
-#                 _logger.info("❌ data set %s is invalid", dataset_id)
-#
-#         return result

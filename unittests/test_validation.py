@@ -116,7 +116,6 @@ class TestValidation:
         validator_set.register(check_fail)
         validator_set.register(check_fail2)
         validator_set.register(check_fail3, depends_on=[check_fail])
-        validator_set.validate(dataset_instance)
         with pytest.raises(ExceptionGroup) as error_group:
             validator_set.validate(dataset_instance)
 
