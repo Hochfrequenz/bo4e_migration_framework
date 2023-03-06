@@ -235,8 +235,10 @@ class ValidatorSet(Generic[DataSetT]):
 
     async def validate(self, *data_sets: DataSetT) -> None:
         """
-        Apparently, this function has to be async if we want to use async statements inside it. But I don't want
-        the validate function to be async, so I used this little workaround.
+        Validates each of the provided data set instances onto the registered validator functions.
+        Any errors occurring during validation will be collected and raised together as ExceptionGroup.
+        If a validator depends on other validators which are raising errors, the execution of this validator will be
+        abandoned.
         """
         for data_set in data_sets:
             coroutines = self._prepare_coroutines(data_set)
