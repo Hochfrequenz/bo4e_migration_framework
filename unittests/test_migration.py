@@ -24,7 +24,6 @@ _MyKeyTyp = str
 _MyTargetDataModel = List[str]
 
 
-# @attrs.define(auto_attribs=True, kw_only=True)
 class _MyIntermediateDataModel(Bo4eDataSet):
     data: Dict[str, str]
 

@@ -65,10 +65,6 @@ class Bo4eDataSet(BaseModel, ABC):
 
     _uuid: uuid.UUID = uuid.uuid4()
 
-    # def __init__(self, **data: Any):
-    #     super().__init__(**data)
-    #     self._uuid = uuid.uuid4()
-
     def get_id(self) -> str:
         """
         returns a unique id that only this dataset uses.
