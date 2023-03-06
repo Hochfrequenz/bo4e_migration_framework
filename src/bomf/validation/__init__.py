@@ -22,6 +22,31 @@ class ValidatorType(Protocol):
         ...
 
 
+class ValidationError(RuntimeError):
+    def __init__(self, message_detail: str, data_set: Bo4eDataSet, cause: Exception):
+        message = f"Validation error for {data_set.__class__.__name__}(id={data_set.get_id()}): {message_detail}"
+        super().__init__(message)
+        self.__cause__ = cause
+
+
+class ErrorHandler:
+    def __init__(self, data_set: Bo4eDataSet):
+        self.data_set = data_set
+        self.excs: dict[ValidatorType, Exception] = {}
+
+    def catch(self, msg: str, error: Exception, validator_func: ValidatorType):
+        error_nested = ValidationError(
+            msg,
+            self.data_set,
+            error,
+        )
+        _logger.exception(
+            str(error_nested),
+            exc_info=error_nested,
+        )
+        self.excs[validator_func] = error_nested
+
+
 # ValidatorType: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
 # ValidatorType: TypeAlias = FunctionType
 
@@ -129,32 +154,52 @@ class ValidatorSet(Generic[DataSetType]):
         task_group: asyncio.TaskGroup,
         task_schedule: dict[ValidatorType, asyncio.Task[None]],
         coroutines: dict[ValidatorType, Coroutine[Any, Any, None]],
+        error_handler: ErrorHandler,
     ) -> None:
         """
         This recursive method registers a new task for the given validator function in the task group.
         It has to be recursive to ensure that if the validator function depends on other validators that these have
         already registered tasks - or register them if necessary.
         """
-        dep_tasks: list[asyncio.Task[None]] = []
+        dep_tasks: dict[ValidatorType, asyncio.Task[None]] = {}
         for dep in validator_infos.depends_on:
             if dep not in task_schedule:
-                self._register_task(dep, self.field_validators[dep], task_group, task_schedule, coroutines)
-            dep_tasks.append(task_schedule[dep])
+                self._register_task(
+                    dep, self.field_validators[dep], task_group, task_schedule, coroutines, error_handler
+                )
+            dep_tasks[dep] = task_schedule[dep]
 
         assert len(dep_tasks) == len(validator_infos.depends_on)
 
         async def _wrapper() -> Any:
             if len(dep_tasks) > 0:
-                await asyncio.wait(dep_tasks, return_when=asyncio.ALL_COMPLETED)
+                await asyncio.wait(dep_tasks.values(), return_when=asyncio.ALL_COMPLETED)
+            dep_exceptions: dict[ValidatorType, Exception] = {
+                dep: error_handler.excs[dep] for dep in dep_tasks if dep in error_handler.excs
+            }
+            if len(dep_exceptions) > 0:
+                error_handler.catch(
+                    "Execution abandoned due to uncaught exceptions in dependant validators: "
+                    f"{', '.join(dep.__name__ for dep in dep_exceptions)}",
+                    RuntimeError(f"Uncaught exceptions in dependant validators: {list(dep_exceptions.keys())}"),
+                    validator_func,
+                )
+                return
             try:
                 return await asyncio.wait_for(coroutines[validator_func], validator_infos.timeout)
             except TimeoutError as error:
-                _logger.exception(
+                error_handler.catch(
                     f"Timeout ({validator_infos.timeout}s) during execution of "
                     f"validator '{validator_func.__name__}'",
-                    exc_info=error,
+                    error,
+                    validator_func,
                 )
-                raise error
+            except Exception as error_in_validator:
+                error_handler.catch(
+                    f"Uncaught exception raised in validator {validator_func.__name__}: {error_in_validator}",
+                    error_in_validator,
+                    validator_func,
+                )
 
         task_schedule[validator_func] = task_group.create_task(_wrapper())
 
@@ -166,10 +211,23 @@ class ValidatorSet(Generic[DataSetType]):
         for data_set in data_sets:
             coroutines = self._prepare_coroutines(data_set)
             task_schedule: dict[ValidatorType, asyncio.Task[None]] = {}
+            error_handler = ErrorHandler(data_set)
             async with asyncio.TaskGroup() as task_group:
                 for validator_func, validator_infos in self.field_validators.items():
                     if validator_func not in task_schedule:
-                        self._register_task(validator_func, validator_infos, task_group, task_schedule, coroutines)
+                        self._register_task(
+                            validator_func,
+                            validator_infos,
+                            task_group,
+                            task_schedule,
+                            coroutines,
+                            error_handler,
+                        )
+            if len(error_handler.excs) > 0:
+                raise ExceptionGroup(
+                    f"Validation errors for {data_set.__class__.__name__}(id={data_set.get_id()})",
+                    list(error_handler.excs.values()),
+                )
 
     def validate(self, *data_sets: DataSetType) -> None:
         """

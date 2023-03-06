@@ -116,12 +116,20 @@ class TestValidation:
         validator_set.register(check_fail)
         validator_set.register(check_fail2)
         validator_set.register(check_fail3, depends_on=[check_fail])
+        validator_set.validate(dataset_instance)
         with pytest.raises(ExceptionGroup) as error_group:
             validator_set.validate(dataset_instance)
+
         sub_exception_msgs = {str(exception) for exception in error_group.value.exceptions}
-        assert "I failed (on purpose! :O)" in sub_exception_msgs
-        assert "I failed (on purpose! :O - again :OOO)" in sub_exception_msgs
-        assert len(sub_exception_msgs) == 2
+        assert any("I failed (on purpose! :O)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs)
+        assert any(
+            "I failed (on purpose! :O - again :OOO)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs
+        )
+        assert any(
+            "Execution abandoned due to uncaught exceptions in dependant validators" in sub_exception_msg
+            for sub_exception_msg in sub_exception_msgs
+        )
+        assert len(sub_exception_msgs) == 3
 
     @pytest.mark.parametrize(
         ["validator_func", "expected_error"],
