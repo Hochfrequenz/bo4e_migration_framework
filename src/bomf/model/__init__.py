@@ -3,13 +3,13 @@ general data models for migrations
 """
 import enum
 import uuid
-from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional, Type, TypeVar, Union
+from abc import ABC
+from typing import TypeVar, Union
 
 import attrs
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 _SpecificBusinessObject = TypeVar("_SpecificBusinessObject", bound=Geschaeftsobjekt)
 """

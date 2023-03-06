@@ -1,5 +1,5 @@
 """
-bomf performs validation on the intermediate bo4e data set layer.
+bomf performs validation on the intermediate bo4e data set layer. The main class is `ValidatorSet`.
 """
 import asyncio
 import inspect
@@ -12,17 +12,28 @@ from bomf.model import Bo4eDataSet
 _logger = logging.getLogger(__name__)
 
 # pylint:disable=too-few-public-methods
-DataSetType = TypeVar("DataSetType", bound=Bo4eDataSet)
+DataSetT = TypeVar("DataSetT", bound=Bo4eDataSet)
 
 
 class ValidatorType(Protocol):
+    """
+    This is just to satisfy the type checker. This protocol type hints an arbitrary async function which has to return
+    `None`.
+    """
+
     __name__: str
 
     def __call__(self, **kwargs: Any) -> Coroutine[Any, Any, None]:
-        ...
+        """
+        The desired signature of the validator function.
+        """
 
 
 class ValidationError(RuntimeError):
+    """
+    A unified schema for error messages occurring during validation.
+    """
+
     def __init__(self, message_detail: str, data_set: Bo4eDataSet, cause: Exception):
         message = f"Validation error for {data_set.__class__.__name__}(id={data_set.get_id()}): {message_detail}"
         super().__init__(message)
@@ -30,11 +41,20 @@ class ValidationError(RuntimeError):
 
 
 class ErrorHandler:
+    """
+    This class provides functionality to easily log any occurring error.
+    It can save one exception for each validator function.
+    """
+
     def __init__(self, data_set: Bo4eDataSet):
         self.data_set = data_set
         self.excs: dict[ValidatorType, Exception] = {}
 
     def catch(self, msg: str, error: Exception, validator_func: ValidatorType):
+        """
+        Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
+        validation error.
+        """
         error_nested = ValidationError(
             msg,
             self.data_set,
@@ -47,32 +67,48 @@ class ErrorHandler:
         self.excs[validator_func] = error_nested
 
 
-# ValidatorType: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
-# ValidatorType: TypeAlias = FunctionType
-
-
 @dataclass
 class _ValidatorInfos:
+    """
+    This dataclass holds information to a registered validator function.
+    You can specify dependant validators which will always be finished before executing the validator.
+    If the validator can't finish in time (denoted by timeout in seconds) the execution will be interrupted and an
+    error will be raised. If the timeout is not specified (`None`), the validator will not be stopped.
+    """
+
     depends_on: list[ValidatorType]
-    timeout: Optional[int]
+    timeout: Optional[int | float]
 
 
-class ValidatorSet(Generic[DataSetType]):
-    def __init__(self, *args, **kwargs):
+class ValidatorSet(Generic[DataSetT]):
+    """
+    This class contains functionality to register and execute a set of validator functions.
+    Note that you can define multiple `ValidatorSet`s for a data set just by creating another instance and registering
+    other validator functions.
+    Note: You have to define the generic data set type. Otherwise, registering functions will raise an AttributeError.
+    """
+
+    def __init__(self):
         self.field_validators: dict[ValidatorType, _ValidatorInfos] = {}
-        self._data_set_type: Optional[type[DataSetType]] = None
+        self._data_set_type: Optional[type[DataSetT]] = None
 
     @property
-    def data_set_type(self) -> type[DataSetType]:
+    def data_set_type(self) -> type[DataSetT]:
+        """
+        Holds the dataset type.
+        """
         if self._data_set_type is None:
+            # pylint: disable=no-member
             self._data_set_type = self.__orig_class__.__args__[0]  # type:ignore[attr-defined]
+            # If this raises an AttributeError, you probably have forgotten to specify the dataset type as generic
+            # argument.
         return self._data_set_type
 
     def register(
         self,
         validator_func: ValidatorType,
         depends_on: Optional[list[ValidatorType]] = None,
-        timeout: Optional[int] = None,
+        timeout: Optional[int | float] = None,
     ) -> None:
         """
         Register a new validator function to call upon running `validate`. It checks if the provided validator function
@@ -126,10 +162,10 @@ class ValidatorSet(Generic[DataSetType]):
                     f"'{arg_type}' != '{dataset_annotations[name]}'"
                 )
 
-        _logger.debug(f"Registered validator function: {validator_func.__name__}")
+        _logger.debug("Registered validator function: %s", validator_func.__name__)
         self.field_validators[validator_func] = _ValidatorInfos(depends_on=depends_on, timeout=timeout)
 
-    def _fill_params(self, validator_func: ValidatorType, data_set: DataSetType) -> Coroutine[Any, Any, None]:
+    def _fill_params(self, validator_func: ValidatorType, data_set: DataSetT) -> Coroutine[Any, Any, None]:
         """
         This function fills the arguments of the validator function with the respective values in the data set
         and returns the coroutine.
@@ -140,13 +176,14 @@ class ValidatorSet(Generic[DataSetType]):
                 arguments[arg_name] = getattr(data_set, arg_name)
         return validator_func(**arguments)
 
-    def _prepare_coroutines(self, data_set: DataSetType) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
+    def _prepare_coroutines(self, data_set: DataSetT) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
         """
         This function fills the arguments of all validator functions with the respective values in the data set
         and returns the coroutines for each validator function as a dictionary.
         """
         return {validator_func: self._fill_params(validator_func, data_set) for validator_func in self.field_validators}
 
+    # pylint: disable=too-many-arguments
     def _register_task(
         self,
         validator_func: ValidatorType,
@@ -194,7 +231,7 @@ class ValidatorSet(Generic[DataSetType]):
                     error,
                     validator_func,
                 )
-            except Exception as error_in_validator:
+            except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
                 error_handler.catch(
                     f"Uncaught exception raised in validator {validator_func.__name__}: {error_in_validator}",
                     error_in_validator,
@@ -203,7 +240,7 @@ class ValidatorSet(Generic[DataSetType]):
 
         task_schedule[validator_func] = task_group.create_task(_wrapper())
 
-    async def validate_async(self, *data_sets: DataSetType) -> None:
+    async def _validate_async(self, *data_sets: DataSetT) -> None:
         """
         Apparently, this function has to be async if we want to use async statements inside it. But I don't want
         the validate function to be async, so I used this little workaround.
@@ -229,8 +266,11 @@ class ValidatorSet(Generic[DataSetType]):
                     list(error_handler.excs.values()),
                 )
 
-    def validate(self, *data_sets: DataSetType) -> None:
+    def validate(self, *data_sets: DataSetT) -> None:
         """
-        Validates the provided data set instances onto the registered validator functions. If any error occures
+        Validates each of the provided data set instances onto the registered validator functions.
+        Any errors occurring during validation will be collected and raised together as ExceptionGroup.
+        If a validator depends on other validators which are raising errors, the execution of this validator will be
+        abandoned.
         """
-        asyncio.run(self.validate_async(*data_sets))
+        asyncio.run(self._validate_async(*data_sets))
