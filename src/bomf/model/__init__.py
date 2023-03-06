@@ -9,7 +9,7 @@ from typing import TypeVar, Union
 import attrs
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
-from pydantic import BaseModel  # pylint: disable=no-name-in-module
+from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 
 _SpecificBusinessObject = TypeVar("_SpecificBusinessObject", bound=Geschaeftsobjekt)
 """
@@ -63,7 +63,7 @@ class Bo4eDataSet(BaseModel, ABC):
     A BO4E data set is a collection of Business Objects that relate to each other.
     """
 
-    _uuid: uuid.UUID = uuid.uuid4()
+    _uuid: uuid.UUID = Field(default_factory=uuid.uuid4)
 
     def get_id(self) -> str:
         """

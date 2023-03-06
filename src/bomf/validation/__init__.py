@@ -5,6 +5,7 @@ import asyncio
 import inspect
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Callable, Coroutine, Generic, Optional, Protocol, TypeAlias, TypeVar
 
 from bomf.model import Bo4eDataSet
@@ -59,13 +60,14 @@ class ErrorHandler:
 class _ValidatorInfos:
     """
     This dataclass holds information to a registered validator function.
-    You can specify dependent validators which will always be finished before executing the validator.
-    If the validator can't finish in time (denoted by timeout in seconds) the execution will be interrupted and an
+    You can specify dependent validators which will always be completed before executing the validator.
+    If the validator can't complete in time (denoted by timeout in seconds) the execution will be interrupted and an
     error will be raised. If the timeout is not specified (`None`), the validator will not be stopped.
     """
 
     depends_on: list[ValidatorType]
-    timeout: Optional[int | float]
+    timeout: Optional[timedelta]
+    # The timeout time in seconds
 
 
 class ValidatorSet(Generic[DataSetT]):
@@ -96,7 +98,7 @@ class ValidatorSet(Generic[DataSetT]):
         self,
         validator_func: ValidatorType,
         depends_on: Optional[list[ValidatorType]] = None,
-        timeout: Optional[int | float] = None,
+        timeout: Optional[timedelta] = None,
     ) -> None:
         """
         Register a new validator function to call upon running `validate`. It checks if the provided validator function
@@ -112,9 +114,9 @@ class ValidatorSet(Generic[DataSetT]):
 
         All validator functions will be executed concurrently by default. However, if you want to execute certain
         validators first, you can define this functions in the `depends_on` argument. The validator will then be
-        executed when all dependant validators have finished.
+        executed when all dependent validators have completed.
         You can also define a timeout (in seconds, can be float or int). The validator will be cancelled if it doesn't
-        finish in time. Note that if you define dependant validators the execution time of these will not be counted
+        complete in time. Note that if you define dependent validators the execution time of these will not be counted
         for the timeout on this validator.
         """
         if depends_on is None:
@@ -204,17 +206,20 @@ class ValidatorSet(Generic[DataSetT]):
             }
             if len(dep_exceptions) > 0:
                 error_handler.catch(
-                    "Execution abandoned due to uncaught exceptions in dependant validators: "
+                    "Execution abandoned due to uncaught exceptions in dependent validators: "
                     f"{', '.join(dep.__name__ for dep in dep_exceptions)}",
-                    RuntimeError(f"Uncaught exceptions in dependant validators: {list(dep_exceptions.keys())}"),
+                    RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
                     validator_func,
                 )
                 return
             try:
-                return await asyncio.wait_for(coroutines[validator_func], validator_infos.timeout)
+                return await asyncio.wait_for(
+                    coroutines[validator_func],
+                    validator_infos.timeout.total_seconds() if validator_infos.timeout is not None else None,
+                )
             except TimeoutError as error:
                 error_handler.catch(
-                    f"Timeout ({validator_infos.timeout}s) during execution of "
+                    f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution of "
                     f"validator '{validator_func.__name__}'",
                     error,
                     validator_func,

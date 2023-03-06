@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 
 import pytest
 
@@ -171,7 +172,7 @@ class TestValidation:
 
     async def test_timeout(self):
         validator_set = ValidatorSet[DataSetTest]()
-        validator_set.register(check_x_expensive, timeout=0.1)
+        validator_set.register(check_x_expensive, timeout=timedelta(milliseconds=100))
         with pytest.raises(ExceptionGroup) as error_group:
             await validator_set.validate(dataset_instance)
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
