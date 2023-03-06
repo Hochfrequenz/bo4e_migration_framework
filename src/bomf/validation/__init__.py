@@ -59,7 +59,7 @@ class ErrorHandler:
 class _ValidatorInfos:
     """
     This dataclass holds information to a registered validator function.
-    You can specify dependant validators which will always be finished before executing the validator.
+    You can specify dependent validators which will always be finished before executing the validator.
     If the validator can't finish in time (denoted by timeout in seconds) the execution will be interrupted and an
     error will be raised. If the timeout is not specified (`None`), the validator will not be stopped.
     """
