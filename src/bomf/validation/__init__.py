@@ -5,7 +5,7 @@ import asyncio
 import inspect
 import logging
 from dataclasses import dataclass
-from typing import Any, Coroutine, Generic, Optional, Protocol, TypeVar
+from typing import Any, Callable, Coroutine, Generic, Optional, Protocol, TypeAlias, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -14,19 +14,7 @@ _logger = logging.getLogger(__name__)
 # pylint:disable=too-few-public-methods
 DataSetT = TypeVar("DataSetT", bound=Bo4eDataSet)
 
-
-class ValidatorType(Protocol):
-    """
-    This is just to satisfy the type checker. This protocol type hints an arbitrary async function which has to return
-    `None`.
-    """
-
-    __name__: str
-
-    def __call__(self, **kwargs: Any) -> Coroutine[Any, Any, None]:
-        """
-        The desired signature of the validator function.
-        """
+ValidatorType: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
 
 
 class ValidationError(RuntimeError):
