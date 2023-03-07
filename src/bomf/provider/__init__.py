@@ -4,6 +4,7 @@ providers provide data
 import json
 import logging
 from abc import ABC, abstractmethod
+from itertools import groupby
 from pathlib import Path
 from typing import Callable, Generic, List, Mapping, Optional, Protocol, TypeVar, Union
 
@@ -50,6 +51,15 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
         instantiate it by providing a list of source data models
         """
         self._models: List[SourceDataModel] = source_data_models
+        logger = logging.getLogger(self.__module__)
+        for key, key_models in groupby(source_data_models, key=key_selector):
+            affected_entries_count = len(list(key_models))
+            if affected_entries_count > 1:
+                logger.warning(
+                    "There are %i>1 entries for the key '%s'. You might miss entries because the key is not unique.",
+                    affected_entries_count,
+                    str(key),
+                )
         self._models_dict: Mapping[KeyTyp, SourceDataModel] = {key_selector(m): m for m in source_data_models}
         logging.getLogger(self.__module__).info(
             "Read %i records from %s", len(self._models_dict), str(source_data_models)
