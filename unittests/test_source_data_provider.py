@@ -49,3 +49,12 @@ class TestListBasedSourceDataProvider:
         assert len(my_provider.get_data()) == 3
         assert my_provider.get_entry("bar") == "bar"
         assert "Read 3 records from ['foo', 'bar', 'baz']" in caplog.messages
+
+    def test_list_based_provider_key_warning(self, caplog):
+        caplog.set_level(logging.WARNING, logger=ListBasedSourceDataProvider.__module__)
+        my_provider = ListBasedSourceDataProvider(["fooy", "fooz" "bar", "baz"], key_selector=lambda x: x[0:3])
+        assert len(my_provider.get_data()) == 3
+        assert (
+            "There are 2>1 entries for the key 'foo'. You might miss entries because the key is not unique."
+            in caplog.messages
+        )
