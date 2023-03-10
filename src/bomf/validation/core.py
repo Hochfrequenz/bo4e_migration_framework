@@ -1,3 +1,6 @@
+"""
+Contains core functionality to validate arbitrary Bo4eDataSets
+"""
 import asyncio
 import inspect
 import logging
@@ -23,6 +26,7 @@ class ValidationError(RuntimeError):
         self.__cause__ = cause
 
 
+# pylint: disable=too-few-public-methods
 class ErrorHandler:
     """
     This class provides functionality to easily log any occurring error.
