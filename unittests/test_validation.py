@@ -3,8 +3,9 @@ from datetime import timedelta
 
 import pytest
 
+from bomf import ValidatorSet
 from bomf.model import Bo4eDataSet
-from bomf.validation import ValidatorSet, ValidatorType
+from bomf.validation.core import ValidatorType
 
 
 class DataSetTest(Bo4eDataSet):
