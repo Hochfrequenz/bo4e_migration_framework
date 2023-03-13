@@ -19,7 +19,7 @@ class Wrapper(BaseModel):
 class DataSetTest(Bo4eDataSet):
     x: str
     y: int
-    z: Wrapper = Field(default_factory=Wrapper)
+    z: Wrapper
 
 
 dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper(x="Hello"))
@@ -45,7 +45,7 @@ async def check_xy_ending(x: str, y: int) -> None:
 
 async def check_required_and_optional(z: Wrapper) -> None:
     zx = required_field(z, "x", str)
-    zz = optional_field(z, "z", Optional[str])
+    zz = optional_field(z, "z", str)
     assert zx == "Hello"
     assert zz is None
 
@@ -53,7 +53,7 @@ async def check_required_and_optional(z: Wrapper) -> None:
 async def check_required_and_optional_undefined(z: Wrapper) -> None:
     with pytest.raises(ValueError) as exc:
         zx = required_field(z, "rofl", str)
-    zz = optional_field(z, "rofl", Optional[str])
+    zz = optional_field(z, "rofl", str)
     assert zz is None
 
 
