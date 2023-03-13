@@ -6,6 +6,7 @@ from typing import Any, Optional, TypeVar, cast
 FieldT = TypeVar("FieldT")
 
 
+# pylint: disable=unused-argument
 def required_field(obj: Any, attribute_path: str, field_type: type[FieldT]) -> FieldT:
     r"""
     Extracts the value of the provided object by resolving the attribute path. The return type is specified as argument
