@@ -21,7 +21,7 @@ _SpecificCom = TypeVar("_SpecificCom", bound=COM)
 an arbitrary but fixed COM type
 """
 
-Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]
+Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]  # pylint: disable=invalid-name
 
 
 # pylint:disable=too-few-public-methods
@@ -74,8 +74,8 @@ class Bo4eDataSet(BaseModel, ABC):
         try:
             return str(self._uuid)
         except AttributeError as attribute_error:
-            if attribute_error.name == "_uuid" in str(attribute_error):
+            if attribute_error.name == "_uuid":
                 raise ValueError(
-                    f"You probably forgot to call super().__init()__ in the constructor of {self.__class__}"
+                    f"You probably forgot to call super().__init__() in the constructor of {self.__class__}"
                 ) from attribute_error
             raise
