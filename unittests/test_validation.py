@@ -1,19 +1,28 @@
 import asyncio
 from datetime import timedelta
+from typing import Optional
 
 import pytest
+from pydantic import BaseModel, Field
 
 from bomf import ValidatorSet
 from bomf.model import Bo4eDataSet
+from bomf.validation import optional_field, required_field
 from bomf.validation.core import ValidatorType
+
+
+class Wrapper(BaseModel):
+    x: str
+    z: Optional[str] = None
 
 
 class DataSetTest(Bo4eDataSet):
     x: str
     y: int
+    z: Wrapper = Field(default_factory=Wrapper)
 
 
-dataset_instance = DataSetTest(x="lo16", y=16)
+dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper(x="Hello"))
 finishing_order: list[ValidatorType]
 
 
@@ -32,6 +41,20 @@ async def check_xy_ending(x: str, y: int) -> None:
     if not x.endswith(str(y)):
         raise ValueError("x does not end with y")
     finishing_order.append(check_xy_ending)
+
+
+async def check_required_and_optional(z: Wrapper) -> None:
+    zx = required_field(z, "x", str)
+    zz = optional_field(z, "z", Optional[str])
+    assert zx == "Hello"
+    assert zz is None
+
+
+async def check_required_and_optional_undefined(z: Wrapper) -> None:
+    with pytest.raises(ValueError) as exc:
+        zx = required_field(z, "rofl", str)
+    zz = optional_field(z, "rofl", Optional[str])
+    assert zz is None
 
 
 async def check_fail(x: str) -> None:
@@ -54,7 +77,7 @@ async def incorrectly_annotated2(x: str, y) -> None:
     pass
 
 
-async def incorrectly_annotated3(x: str, z: str) -> None:
+async def incorrectly_annotated3(x: str, rofl: str) -> None:
     pass
 
 
@@ -147,7 +170,7 @@ class TestValidation:
             ),
             pytest.param(
                 incorrectly_annotated3,
-                "Argument 'z' does not exist as field in the DataSet "
+                "Argument 'rofl' does not exist as field in the DataSet "
                 "'<class 'unittests.test_validation.DataSetTest'>'.",
                 id="Argument does not exist in dataset",
             ),
@@ -179,3 +202,13 @@ class TestValidation:
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
         assert len(sub_exception_msgs) == 1
         assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
+
+    async def test_required_and_optional(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_required_and_optional)
+        await validator_set.validate(dataset_instance)
+
+    async def test_required_and_optional_undefined(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_required_and_optional_undefined)
+        await validator_set.validate(dataset_instance)
