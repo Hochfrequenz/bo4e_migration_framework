@@ -21,7 +21,7 @@ _SpecificCom = TypeVar("_SpecificCom", bound=COM)
 an arbitrary but fixed COM type
 """
 
-Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]
+Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]  # pylint:disable=invalid-name
 
 
 # pylint:disable=too-few-public-methods
