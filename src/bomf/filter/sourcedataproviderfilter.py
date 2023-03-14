@@ -2,7 +2,7 @@
 Source Data Provider Filters combine the features of a filter with the features of a Source Data Provider.
 """
 
-from typing import Callable, Generic, List, Literal, Optional, overload, Iterable
+from typing import Callable, Generic, Literal, Optional, overload, Iterable
 
 from bomf import KeyTyp, SourceDataProvider
 from bomf.filter import Candidate, Filter
