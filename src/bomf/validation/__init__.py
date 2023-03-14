@@ -225,7 +225,7 @@ class ValidatorSet(Generic[DataSetT]):
                     error,
                     validator_func,
                 )
-            except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
+            except Exception as error_in_validator:  # pylint: disable=broad-except
                 error_handler.catch(
                     f"Uncaught exception raised in validator {validator_func.__name__}: {error_in_validator}",
                     error_in_validator,

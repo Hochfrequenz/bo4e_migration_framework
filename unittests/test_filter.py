@@ -29,7 +29,7 @@ class TestFilter:
     async def test_filter(self, filter_under_test: Filter, candidates: List[dict], survivors: List[dict], caplog):
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         actual = await filter_under_test.apply(candidates)
-        assert actual == survivors
+        assert list(actual) == survivors
         assert "1 out of 2 candidates have been removed by the filter" in caplog.messages
 
 
@@ -93,13 +93,10 @@ class TestAggregateFilter:
         ],
     )
     async def test_aggregate_filter(
-        self, filter_under_test: AggregateFilter, candidates: List[dict], survivors: List[dict], caplog
+        self, filter_under_test: AggregateFilter, candidates: List[dict], survivors: List[dict]
     ):
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
         actual = await filter_under_test.apply(candidates)
-        assert actual == survivors
-        assert "There are 4 candidates and 4 aggregates" in caplog.messages
-        assert "There are 2 filtered aggregates left" in caplog.messages
+        assert list(actual) == survivors
 
 
 class TestBlockAndAllowlistFilter:
@@ -108,14 +105,14 @@ class TestBlockAndAllowlistFilter:
         candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
         allowlist_filter: AllowlistFilter[dict[str, str], str] = AllowlistFilter(lambda c: c["foo"], allowlist)
         actual = await allowlist_filter.apply(candidates)
-        assert actual == [{"foo": "A"}, {"foo": "B"}]
+        assert list(actual) == [{"foo": "A"}, {"foo": "B"}]
 
     async def test_blocklist_filter(self):
         blocklist = {"A", "B", "C"}
         candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
         blocklist_filter: BlocklistFilter[dict[str, str], str] = BlocklistFilter(lambda c: c["foo"], blocklist)
         actual = await blocklist_filter.apply(candidates)
-        assert actual == [{"foo": "Z"}]
+        assert list(actual) == [{"foo": "Z"}]
 
 
 class TestSourceDataProviderFilter:
@@ -135,23 +132,16 @@ class TestSourceDataProviderFilter:
         ],
     )
     async def test_source_data_provider_filter(
-        self,
-        candidate_filter: Filter[_MyCandidate],
-        candidates: List[_MyCandidate],
-        survivors: List[_MyCandidate],
-        caplog,
+        self, candidate_filter: Filter[_MyCandidate], candidates: List[_MyCandidate], survivors: List[_MyCandidate]
     ):
         my_provider: ListBasedSourceDataProvider[_MyCandidate, int] = ListBasedSourceDataProvider(
             candidates, key_selector=lambda mc: mc.number
         )
         sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(candidate_filter)
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
         filtered_provider = await sdp_filter.apply(my_provider)
         assert isinstance(filtered_provider, SourceDataProvider)
         actual = filtered_provider.get_data()
-        assert actual == survivors
-        assert "There are 4 candidates and 4 aggregates" in caplog.messages
-        assert "There are 2 filtered aggregates left" in caplog.messages
+        assert list(actual) == survivors
 
     async def test_source_data_provider_filter_error(self):
         my_provider: ListBasedSourceDataProvider[dict, str] = ListBasedSourceDataProvider(

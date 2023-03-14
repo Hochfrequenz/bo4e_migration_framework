@@ -2,7 +2,7 @@
 Source Data Provider Filters combine the features of a filter with the features of a Source Data Provider.
 """
 
-from typing import Callable, Generic, List, Literal, Optional, overload
+from typing import Callable, Generic, List, Literal, Optional, overload, Iterable
 
 from bomf import KeyTyp, SourceDataProvider
 from bomf.filter import Candidate, Filter
@@ -77,7 +77,7 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
         However, in general, you have to specify how the data can be indexed using a key_selector which is not None.
         If you provide both a JsonFileSourceDataProvider AND a key_selector, the explicit key_selector will be used.
         """
-        survivors: List[Candidate] = await self._filter.apply(source_data_provider.get_data())
+        survivors: Iterable[Candidate] = await self._filter.apply(source_data_provider.get_data())
         key_selector_to_be_used: Callable[[Candidate], KeyTyp]
         if key_selector is not None:
             key_selector_to_be_used = key_selector
@@ -87,6 +87,6 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
             # * either provide a source_data_provider which has a key_selector attribute
             # * or explicitly provide a key_selector as (non-None) argument
         filtered_data_provider_class = ListBasedSourceDataProvider(
-            source_data_models=survivors, key_selector=key_selector_to_be_used
+            source_data_models=list(survivors), key_selector=key_selector_to_be_used
         )
         return filtered_data_provider_class

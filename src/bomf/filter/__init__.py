@@ -7,7 +7,7 @@ filters can be used to consider only those objects for a migration that meet cer
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Awaitable, Callable, Generic, List, Set, TypeVar
+from typing import Awaitable, Callable, Generic, List, Set, TypeVar, Iterable
 
 Candidate = TypeVar("Candidate")  #: an arbitrary but fixed type on which the filter operates
 
@@ -34,7 +34,7 @@ class Filter(ABC, Generic[Candidate]):
         """
         raise NotImplementedError("The inheriting class has to implement this method")
 
-    async def apply(self, candidates: List[Candidate]) -> List[Candidate]:
+    async def apply(self, candidates: Iterable[Candidate]) -> Iterable[Candidate]:
         """
         apply this filter on the candidates
         """
@@ -42,12 +42,15 @@ class Filter(ABC, Generic[Candidate]):
         self._logger.info("%s created %i predicate tasks; Awaiting them all", str(self), len(tasks))
         predicate_results = await asyncio.gather(*tasks)
         self._logger.info("%s awaited %i tasks", str(self), len(tasks))
-        result = [
+        result = (
             c for c, predicate_match in zip(candidates, predicate_results, strict=True) if predicate_match is True
-        ]
+        )
         candidates_removed = sum(1 for pr in predicate_results if pr is False)
+        candidates_kept = sum(1 for pr in predicate_results if pr is True)
         self._logger.info(
-            "%i out of %i candidates have been removed by the filter", candidates_removed, len(candidates)
+            "%i out of %i candidates have been removed by the filter",
+            candidates_removed,
+            candidates_kept + candidates_removed,
         )
         return result
 
@@ -75,7 +78,7 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         self._base_filter = base_filter
 
     @abstractmethod
-    async def aggregate(self, candidates: List[Candidate]) -> List[Aggregate]:
+    async def aggregate(self, candidates: Iterable[Candidate]) -> Iterable[Aggregate]:
         """
         Create aggregates which are then passed to the base filter that works on the aggregate.
         The method is async so that you can do complex (and e.g. network based) aggregations.
@@ -89,16 +92,14 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         """
         raise NotImplementedError("The inheriting class has to implement this method")
 
-    async def apply(self, candidates: List[Candidate]) -> List[Candidate]:
+    async def apply(self, candidates: Iterable[Candidate]) -> Iterable[Candidate]:
         """
         If aggregate and disaggregate and the base_filter are properly setup, then apply will filter the list of
         candidates based on the aggregate base filter.
         """
         aggregates = await self.aggregate(candidates)
-        self._logger.info("There are %i candidates and %i aggregates", len(candidates), len(aggregates))
         filtered_aggregates = await self._base_filter.apply(aggregates)
-        self._logger.info("There are %i filtered aggregates left", len(filtered_aggregates))
-        return [self.disaggregate(fa) for fa in filtered_aggregates]
+        return (self.disaggregate(fa) for fa in filtered_aggregates)
 
 
 CandidateProperty = TypeVar("CandidateProperty")
