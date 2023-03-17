@@ -65,7 +65,7 @@ async def _my_rule(data: Dict[str, str]) -> None:
 
 
 _my_validation = ValidatorSet[_MyIntermediateDataModel]()
-_my_validation.register(_my_rule)
+_my_validation.register(_my_rule, {"data": "data"})
 
 
 class _MyToTargetMapper(Bo4eDataSetToTargetMapper[_MyTargetDataModel, _MyIntermediateDataModel]):
