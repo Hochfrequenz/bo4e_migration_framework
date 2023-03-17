@@ -4,9 +4,12 @@ Contains core functionality to validate arbitrary Bo4eDataSets
 import asyncio
 import inspect
 import logging
+import types
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeVar
+from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeVar, Union
+
+from typeguard import check_type
 
 from bomf.model import Bo4eDataSet
 
@@ -55,6 +58,25 @@ class ErrorHandler:
 
 
 @dataclass
+class ValidatorParamInfos:
+    """
+    Contains some information about a specific parameter.
+    """
+
+    param_type: Any
+    # Contains the annotated type of the parameter
+    attribute_path: list[str]
+    # Contains the attribute path defined by `parameter_map` when registering the validator function
+    required: bool = True
+    # If the parameter has no default value it is considered as required otherwise as optional
+    provided: bool = True
+    # This field is useful for optional parameters to determine if the parameter value was provided or set to the
+    # default value. This resolves the ambiguity occurring when the provided value equals the default value of the
+    # parameter.
+    # provided is filled with senseful data during validation in _fill_params
+
+
+@dataclass
 class _ValidatorInfos:
     """
     This dataclass holds information to a registered validator function.
@@ -66,6 +88,10 @@ class _ValidatorInfos:
     depends_on: list[ValidatorType]
     timeout: Optional[timedelta]
     # The timeout time in seconds
+    param_infos: dict[str, ValidatorParamInfos]
+    # Contains infos about all parameters of a validator function. The key indicates the parameter name.
+    special_params: dict[str, Any]
+    # Contains the name and the annotated type of special parameters used in the validator function.
 
 
 class ValidatorSet(Generic[DataSetT]):
@@ -79,6 +105,7 @@ class ValidatorSet(Generic[DataSetT]):
     def __init__(self):
         self.field_validators: dict[ValidatorType, _ValidatorInfos] = {}
         self._data_set_type: Optional[type[DataSetT]] = None
+        self.special_params: dict[str, Any] = {"_param_infos": dict[str, ValidatorParamInfos]}
 
     @property
     def data_set_type(self) -> type[DataSetT]:
@@ -86,6 +113,8 @@ class ValidatorSet(Generic[DataSetT]):
         Holds the dataset type.
         """
         if self._data_set_type is None:
+            if not hasattr(self, "__orig_class__"):
+                raise TypeError("You have to use an instance of ValidatorSet and define the generic type.")
             # pylint: disable=no-member
             self._data_set_type = self.__orig_class__.__args__[0]  # type:ignore[attr-defined]
             # If this raises an AttributeError, you probably have forgotten to specify the dataset type as generic
@@ -95,27 +124,40 @@ class ValidatorSet(Generic[DataSetT]):
     def register(
         self,
         validator_func: ValidatorType,
+        parameter_map: dict[str, str],
         depends_on: Optional[list[ValidatorType]] = None,
         timeout: Optional[timedelta] = None,
     ) -> None:
         """
         Register a new validator function to call upon running `validate`. It checks if the provided validator function
         is valid in the first place. If the function is invalid a ValueError will be raised.
-        The validator function has to by async. The return type must be `None`.
-        The validators arguments have to match the respective field in the dataset (name and type). This means of
-        course that the function has to be fully type hinted. E.g. if you want to validate the field `x` of type `str`
-        in your dataset, the validator function signature has to look as follows:
+        The validator function has to by async. The return type is irrelevant and will be ignored.
+        The validators arguments are mapped onto the dataset using `parameter_map`. `parameter_map` must be a dictionary
+        with all parameter names as the keys of this dictionary. The respective value corresponds to an attribute
+        inside the data set in point notation. This means of course that the function must be fully type hinted and the
+        type hints of the function arguments should match the type hints of the respective data.
+
+        E.g. if you have a data set with field x of type ClassX and this type
+        holds an attribute y of type int, you can reference this with "x.y":
         ```
-        async def my_validator_name(x: str) -> None:
+        async def my_validator_name(my_y: int):
             ...
+
+        validator_set = ValidatorSet[MyDataSet]()
+        validator_set.register(my_validator_name, {"my_y", "x.y"})
         ```
 
         All validator functions will be executed concurrently by default. However, if you want to execute certain
         validators first, you can define this functions in the `depends_on` argument. The validator will then be
         executed when all dependent validators have completed.
-        You can also define a timeout (in seconds, can be float or int). The validator will be cancelled if it doesn't
-        complete in time. Note that if you define dependent validators the execution time of these will not be counted
+        You can also define a timeout. The validator will be cancelled if it doesn't complete in time.
+        Note that if you define dependent validators the execution time of these will not be counted
         for the timeout on this validator.
+
+        You can also use special parameters in your validator function. Currently, there is only one:
+            _param_infos: dict[str, ValidatorParamInfos]
+                This parameter contains information about all parameters of the validator function. See
+                ValidatorParamInfos for more details.
         """
         if depends_on is None:
             depends_on = []
@@ -124,34 +166,52 @@ class ValidatorSet(Generic[DataSetT]):
                 raise ValueError(f"The specified dependency is not registered: {dependency.__name__}")
         if not asyncio.iscoroutinefunction(validator_func):
             raise ValueError("The provided validator function has to be a coroutine (e.g. use async).")
-
-        validator_argspec = inspect.getfullargspec(validator_func)
-        validator_annotations = validator_argspec.annotations
-        unannotated_args = [arg for arg in validator_argspec.args if arg not in validator_annotations]
-        if len(unannotated_args) > 0:
+        if any(mapped_param in self.special_params for mapped_param in parameter_map):
             raise ValueError(
-                f"Incorrectly annotated validator function: Arguments {unannotated_args} have no type annotation."
+                "Special parameters cannot be mapped. "
+                f"The following parameters are reserved: {list(self.special_params.keys())}"
             )
-        dataset_annotations = self.data_set_type.__annotations__
 
-        if "return" not in validator_annotations or validator_annotations["return"] is not None:
-            raise ValueError("Incorrectly annotated validator function: The return type must be 'None'.")
-        if len(validator_annotations) < 2:
-            raise ValueError("Incorrectly annotated validator function: The function must take at least one argument.")
-        for name, arg_type in validator_annotations.items():
-            if name == "return":
-                continue
-            if name not in self.data_set_type.__fields__:
-                raise ValueError(f"Argument '{name}' does not exist as field in the DataSet '{self.data_set_type}'.")
-            if arg_type != dataset_annotations[name]:
-                raise ValueError(
-                    "Incorrectly annotated validator function: "
-                    f"The annotated type of argument '{name}' mismatches the type in the DataSet: "
-                    f"'{arg_type}' != '{dataset_annotations[name]}'"
-                )
+        validator_signature = inspect.signature(validator_func)
+        validator_params_for_mapping = [
+            param for param in validator_signature.parameters if param not in self.special_params
+        ]
+        if validator_params_for_mapping != list(parameter_map.keys()):
+            raise ValueError(
+                f"The parameter list of the validator function must match the parameter_map. "
+                f"{validator_params_for_mapping} != {list(parameter_map.keys())}"
+            )
+        if len(validator_params_for_mapping) == 0:
+            raise ValueError("The validator function must take at least one argument.")
+
+        validator_param_infos: dict[str, ValidatorParamInfos] = {}
+        for param, attribute_path in parameter_map.items():
+            param_annotation = validator_signature.parameters[param].annotation
+            if param_annotation == validator_signature.empty:
+                raise ValueError(f"The parameter {param} has no annotated type.")
+            if isinstance(param_annotation, types.UnionType):
+                # This is a little workaround because typeguards check_type function doesn't work with '|' notation
+                # but with Union.
+                param_annotation = Union[*param_annotation.__args__]
+            validator_param_infos[param] = ValidatorParamInfos(
+                attribute_path=attribute_path.split("."),
+                required=validator_signature.parameters[param].default == validator_signature.parameters[param].empty,
+                param_type=param_annotation,
+            )
+        validator_special_params: dict[str, Any] = {}
+        for param_name, param in validator_signature.parameters.items():
+            if param.annotation == validator_signature.empty:
+                raise ValueError(f"The parameter {param_name} has no annotated type.")
+            if param_name in self.special_params:
+                validator_special_params[param_name] = param.annotation
 
         _logger.debug("Registered validator function: %s", validator_func.__name__)
-        self.field_validators[validator_func] = _ValidatorInfos(depends_on=depends_on, timeout=timeout)
+        self.field_validators[validator_func] = _ValidatorInfos(
+            depends_on=depends_on,
+            timeout=timeout,
+            param_infos=validator_param_infos,
+            special_params=validator_special_params,
+        )
 
     def _fill_params(self, validator_func: ValidatorType, data_set: DataSetT) -> Coroutine[Any, Any, None]:
         """
@@ -159,9 +219,37 @@ class ValidatorSet(Generic[DataSetT]):
         and returns the coroutine.
         """
         arguments: dict[str, Any] = {}
-        for arg_name in validator_func.__annotations__:
-            if arg_name != "return":
-                arguments[arg_name] = getattr(data_set, arg_name)
+        for param_name, param_infos in self.field_validators[validator_func].param_infos.items():
+            current_obj: Any = data_set
+            param_infos.provided = True
+            for index, attr_name in enumerate(param_infos.attribute_path):
+                try:
+                    current_obj = getattr(current_obj, attr_name)
+                except AttributeError:
+                    param_infos.provided = False
+                    if param_infos.required:
+                        current_path = ".".join([self.data_set_type.__name__, *param_infos.attribute_path[0:index]])
+                        raise AttributeError(
+                            f"{param_name} is required but not existent in the provided data set. "
+                            f"Couldn't find {attr_name} in {current_path}."
+                        )
+                    else:
+                        break
+            if param_infos.provided:
+                arguments[param_name] = current_obj
+                check_type(param_name, current_obj, param_infos.param_type)
+        for special_param_name, special_param_type in self.field_validators[validator_func].special_params.items():
+            match special_param_name:
+                case "_param_infos":
+                    arguments[special_param_name] = self.field_validators[validator_func].param_infos
+                    check_type(
+                        special_param_name,
+                        self.field_validators[validator_func].param_infos,
+                        self.special_params[special_param_name],
+                    )
+                case _:
+                    raise NotImplementedError(f"No implementation for special parameter {special_param_name}")
+            check_type(special_param_name, arguments[special_param_name], special_param_type)
         return validator_func(**arguments)
 
     def _prepare_coroutines(self, data_set: DataSetT) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
