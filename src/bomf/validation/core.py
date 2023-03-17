@@ -86,8 +86,9 @@ class _ValidatorInfos:
     """
 
     depends_on: list[ValidatorType]
+    # Contains a list of validator functions on which this validator function depends.
     timeout: Optional[timedelta]
-    # The timeout time in seconds
+    # Contains the (optional) timeout time after which the validator function will be cancelled.
     param_infos: dict[str, ValidatorParamInfos]
     # Contains infos about all parameters of a validator function. The key indicates the parameter name.
     special_params: dict[str, Any]
