@@ -254,12 +254,24 @@ class ValidatorSet(Generic[DataSetT]):
             check_type(special_param_name, arguments[special_param_name], special_param_type)
         return validator_func(**arguments)
 
-    def _prepare_coroutines(self, data_set: DataSetT) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
+    def _prepare_coroutines(
+        self, data_set: DataSetT, error_handler: ErrorHandler
+    ) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
         """
         This function fills the arguments of all validator functions with the respective values in the data set
         and returns the coroutines for each validator function as a dictionary.
         """
-        return {validator_func: self._fill_params(validator_func, data_set) for validator_func in self.field_validators}
+        coroutines: dict[ValidatorType, Coroutine[Any, Any, None]] = {}
+        for validator_func in self.field_validators:
+            try:
+                coroutines[validator_func] = self._fill_params(validator_func, data_set)
+            except AttributeError as error:
+                error_handler.catch(
+                    f"Couldn't fill in parameter for validator function {validator_func.__name__}: {error}",
+                    error,
+                    validator_func,
+                )
+        return coroutines
 
     # pylint: disable=too-many-arguments
     def _register_task(
@@ -330,11 +342,15 @@ class ValidatorSet(Generic[DataSetT]):
         abandoned.
         """
         for data_set in data_sets:
-            coroutines = self._prepare_coroutines(data_set)
-            task_schedule: dict[ValidatorType, asyncio.Task[None]] = {}
             error_handler = ErrorHandler(data_set)
+            coroutines = self._prepare_coroutines(data_set, error_handler)
+            task_schedule: dict[ValidatorType, asyncio.Task[None]] = {}
             async with asyncio.TaskGroup() as task_group:
                 for validator_func, validator_infos in self.field_validators.items():
+                    if validator_func not in coroutines:
+                        # If the coroutine could not be prepared, i.e. if there were problems with the parameters,
+                        # it should just be skipped here and raised by the error handler later.
+                        continue
                     if validator_func not in task_schedule:
                         self._register_task(
                             validator_func,

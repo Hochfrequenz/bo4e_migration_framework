@@ -245,12 +245,12 @@ class TestValidation:
     async def test_unprovided_but_required(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(unprovided_but_required, {"zz": "z.z"})
-        with pytest.raises(AttributeError) as error:
+        with pytest.raises(ExceptionGroup) as error_group:
             await validator_set.validate(dataset_instance)
 
-        assert (
-            str(error.value)
-            == "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z."
+        assert len(error_group.value.exceptions) == 1
+        assert "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z." in str(
+            error_group.value.exceptions[0]
         )
 
     async def test_map_special_param(self):
