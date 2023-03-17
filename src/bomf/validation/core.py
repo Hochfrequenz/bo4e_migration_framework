@@ -186,17 +186,18 @@ class ValidatorSet(Generic[DataSetT]):
             raise ValueError("The validator function must take at least one argument.")
 
         validator_param_infos: dict[str, ValidatorParamInfos] = {}
-        for param, attribute_path in parameter_map.items():
-            param_annotation = validator_signature.parameters[param].annotation
+        for param_name, attribute_path in parameter_map.items():
+            param_annotation = validator_signature.parameters[param_name].annotation
             if param_annotation == validator_signature.empty:
-                raise ValueError(f"The parameter {param} has no annotated type.")
+                raise ValueError(f"The parameter {param_name} has no annotated type.")
             if isinstance(param_annotation, types.UnionType):
                 # This is a little workaround because typeguards check_type function doesn't work with '|' notation
                 # but with Union.
                 param_annotation = Union[*param_annotation.__args__]
-            validator_param_infos[param] = ValidatorParamInfos(
+            validator_param_infos[param_name] = ValidatorParamInfos(
                 attribute_path=attribute_path.split("."),
-                required=validator_signature.parameters[param].default == validator_signature.parameters[param].empty,
+                required=validator_signature.parameters[param_name].default
+                == validator_signature.parameters[param_name].empty,
                 param_type=param_annotation,
             )
         validator_special_params: dict[str, Any] = {}
