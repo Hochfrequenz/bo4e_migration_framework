@@ -122,6 +122,7 @@ class ValidatorSet(Generic[DataSetT]):
             # argument.
         return self._data_set_type
 
+    # pylint: disable=too-many-branches
     def register(
         self,
         validator_func: ValidatorType,
@@ -227,16 +228,15 @@ class ValidatorSet(Generic[DataSetT]):
             for index, attr_name in enumerate(param_infos.attribute_path):
                 try:
                     current_obj = getattr(current_obj, attr_name)
-                except AttributeError:
+                except AttributeError as exc:
                     param_infos.provided = False
                     if param_infos.required:
                         current_path = ".".join([self.data_set_type.__name__, *param_infos.attribute_path[0:index]])
                         raise AttributeError(
                             f"{param_name} is required but not existent in the provided data set. "
                             f"Couldn't find {attr_name} in {current_path}."
-                        )
-                    else:
-                        break
+                        ) from exc
+                    break
             if param_infos.provided:
                 arguments[param_name] = current_obj
                 check_type(param_name, current_obj, param_infos.param_type)
