@@ -62,6 +62,10 @@ async def check_with_param_info(x: str, _param_infos: dict[str, ValidatorParamIn
     assert ["z", "z"] == _param_infos["zz"].attribute_path
 
 
+async def unprovided_but_required(zz: str):
+    pass
+
+
 async def check_fail(x: str) -> None:
     raise ValueError("I failed (on purpose! :O)")
 
@@ -72,6 +76,10 @@ async def check_fail2(y: int) -> None:
 
 async def check_fail3(y: int) -> None:
     raise ValueError("This shouldn't be raised")
+
+
+async def no_params():
+    pass
 
 
 async def special_param_type_check_fail(x: str, _param_infos: dict[int, float]):
@@ -95,6 +103,13 @@ def not_async(x: str) -> None:
 
 
 class TestValidation:
+    async def test_generic_type(self):
+        """
+        This test ensures, that the data_set_type property works as expected.
+        """
+        validator_set = ValidatorSet[DataSetTest]()
+        assert validator_set.data_set_type == DataSetTest
+
     async def test_async_validation(self):
         """
         This test checks if the validation functions run concurrently by just ensuring that the expensive task
@@ -181,6 +196,7 @@ class TestValidation:
                 "The provided validator function has to be a coroutine (e.g. use async).",
                 id="Function not async",
             ),
+            pytest.param(no_params, {}, "The validator function must take at least one argument.", id="No params"),
         ],
     )
     async def test_illegal_validator_functions(
@@ -225,6 +241,24 @@ class TestValidation:
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
         assert len(sub_exception_msgs) == 1
         assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
+
+    async def test_unprovided_but_required(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(unprovided_but_required, {"zz": "z.z"})
+        with pytest.raises(AttributeError) as error:
+            await validator_set.validate(dataset_instance)
+
+        assert (
+            str(error.value)
+            == "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z."
+        )
+
+    async def test_map_special_param(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        with pytest.raises(ValueError) as error:
+            validator_set.register(check_with_param_info, {"x": "x", "zz": "z.z", "_param_infos": "y"})
+
+        assert "Special parameters cannot be mapped." in str(error.value)
 
     async def test_required_and_optional(self):
         validator_set = ValidatorSet[DataSetTest]()
