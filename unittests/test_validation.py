@@ -240,7 +240,8 @@ class TestValidation:
             await validator_set.validate(dataset_instance)
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
         assert len(sub_exception_msgs) == 1
-        assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
+        assert "Timeout (0.1s) during execution" in sub_exception_msgs[0]
+        assert "Validator function: check_x_expensive" in sub_exception_msgs[0]
 
     async def test_unprovided_but_required(self):
         validator_set = ValidatorSet[DataSetTest]()
