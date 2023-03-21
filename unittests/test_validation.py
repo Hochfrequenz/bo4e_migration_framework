@@ -26,6 +26,15 @@ dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper.construct(x="Hello"))
 finishing_order: list[ValidatorType]
 
 
+async def check_multiple_registration(_param_infos: dict[str, ValidatorParamInfos], x: str):
+    assert _param_infos["x"].attribute_path in (["x"], ["z", "x"])
+    if _param_infos["x"].attribute_path == ["x"]:
+        assert x == "lo16"
+    else:
+        assert x == "Hello"
+    finishing_order.append(check_multiple_registration)
+
+
 async def check_x_expensive(x: str) -> None:
     await asyncio.sleep(0.3)
     finishing_order.append(check_x_expensive)
@@ -253,6 +262,15 @@ class TestValidation:
         assert "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z." in str(
             error_group.value.exceptions[0]
         )
+
+    async def test_multiple_validator_registration(self):
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_multiple_registration, {"x": "x"})
+        validator_set.register(check_multiple_registration, {"x": "z.x"})
+        await validator_set.validate(dataset_instance)
+        assert len(finishing_order) == 2
 
     async def test_map_special_param(self):
         validator_set = ValidatorSet[DataSetTest]()
