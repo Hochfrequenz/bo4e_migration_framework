@@ -63,7 +63,7 @@ class Bo4eDataSet(BaseModel, ABC):
     A BO4E data set is a collection of Business Objects that relate to each other.
     """
 
-    _uuid: uuid.UUID = Field(default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
 
     def get_id(self) -> str:
         """
@@ -72,9 +72,9 @@ class Bo4eDataSet(BaseModel, ABC):
         By default, the id is a stringified UUID that is created in the dataset constructor.
         """
         try:
-            return str(self._uuid)
+            return str(self.id)
         except AttributeError as attribute_error:
-            if attribute_error.name == "_uuid":
+            if attribute_error.name == "uuid":
                 raise ValueError(
                     f"You probably forgot to call super().__init__() in the constructor of {self.__class__}"
                 ) from attribute_error
