@@ -22,7 +22,9 @@ _ParameterMapInternType: TypeAlias = frozendict[str, str]
 _ValidatorMapInternIndexType: TypeAlias = tuple[ValidatorType, _ParameterMapInternType]
 
 
-def _is_validator_type(value: ValidatorType | tuple[ValidatorType, ParameterMapType]) -> TypeGuard[ValidatorType]:
+def _is_validator_type(
+    value: ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType
+) -> TypeGuard[ValidatorType]:
     """
     Returns `True` if the provided value is of type `ValidatorType`. Otherwise, returns `False`.
     """
@@ -162,7 +164,7 @@ class ValidatorSet(Generic[DataSetT]):
         return matching_indices
 
     def _narrow_supplied_dependencies(
-        self, depends_on: list[ValidatorType | tuple[ValidatorType, ParameterMapType]]
+        self, depends_on: list[ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType]
     ) -> list[_ValidatorMapInternIndexType]:
         """
         If a dependency has no parameter map explicitly defined, this functions tries to determine the correct
@@ -200,7 +202,9 @@ class ValidatorSet(Generic[DataSetT]):
         self,
         validator_func: ValidatorType,
         parameter_map: ParameterMapType,
-        depends_on: Optional[list[ValidatorType | tuple[ValidatorType, ParameterMapType]]] = None,
+        depends_on: Optional[
+            list[ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType]
+        ] = None,
         timeout: Optional[timedelta] = None,
     ) -> None:
         """

@@ -124,7 +124,7 @@ class TestValidation:
         """
         This test ensures, that the data_set_type property works as expected.
         """
-        validator_set = ValidatorSet()
+        validator_set = ValidatorSet()  # type:ignore[var-annotated]
         with pytest.raises(TypeError) as exc:
             _ = validator_set.data_set_type
 
