@@ -35,22 +35,49 @@ def _is_validator_type(
         return False
 
 
+def format_parameter_infos(
+    param_mapping: _ParameterMapInternType,
+    params_infos: "dict[str, ValidatorParamInfos]",
+    start_indent: str = "",
+    indent_step_size: str = "\t",
+):
+    """
+    Nicely formats the parameter information for prettier output.
+    """
+    output = start_indent + "{"
+    for param_name in param_mapping:
+        output += f"\n{start_indent}{indent_step_size}{param_name}: {params_infos[param_name].get_summary()}"
+    return f"{output}\n{start_indent}" + "}"
+
+
 class ValidationError(RuntimeError):
     """
     A unified schema for error messages occurring during validation.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
-        self, message_detail: str, cause: Exception, data_set: Bo4eDataSet, validator: _ValidatorMapInternIndexType
+        self,
+        message_detail: str,
+        cause: Exception,
+        data_set: Bo4eDataSet,
+        validator: _ValidatorMapInternIndexType,
+        validator_set: "ValidatorSet",
     ):
+        formatted_param_infos = format_parameter_infos(
+            validator[1], validator_set.field_validators[validator].param_infos, start_indent="\t\t"
+        )
         message = (
             f"Validation error: {message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
-            f"\tValidator function: {validator[0].__name__}"
-            f"\tParameter mapping: {validator[1]}"
+            f"\tValidator function: {validator[0].__name__}\n"
+            f"\tParameter information: \n{formatted_param_infos}"
         )
         super().__init__(message)
         self.__cause__ = cause
+        self.data_set = data_set
+        self.validator = validator
+        self.validator_set = validator_set
 
 
 # pylint: disable=too-few-public-methods
@@ -69,6 +96,7 @@ class ErrorHandler:
         msg: str,
         error: Exception,
         validator: _ValidatorMapInternIndexType,
+        validator_set: "ValidatorSet",
     ):
         """
         Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
@@ -79,6 +107,7 @@ class ErrorHandler:
             error,
             self.data_set,
             validator,
+            validator_set,
         )
         _logger.exception(
             str(error_nested),
@@ -104,6 +133,22 @@ class ValidatorParamInfos:
     # default value. This resolves the ambiguity occurring when the provided value equals the default value of the
     # parameter.
     # provided is filled with senseful data during validation in _fill_params
+    value: Any = None
+    # This field will contain the provided (or default value) for the parameter.
+
+    def get_summary(self) -> str:
+        """
+        Returns a string representation to summarize information about the parameter. Mainly used by error handling.
+        """
+        return (
+            f"value='{str(self.value)}', "
+            f"attribute_path='{'.'.join(self.attribute_path)}', "
+            f"{'required' if self.required else 'optional'}, "
+            f"{'provided' if self.provided else 'unprovided'}"
+        )
+
+    def __repr__(self):
+        return f"ValidatorParamInfos({self.get_summary()})"
 
 
 @dataclass
@@ -197,7 +242,7 @@ class ValidatorSet(Generic[DataSetT]):
             narrowed_depends_on.append(narrowed_dependency)
         return narrowed_depends_on
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-locals
     def register(
         self,
         validator_func: ValidatorType,
@@ -271,11 +316,13 @@ class ValidatorSet(Generic[DataSetT]):
                 # This is a little workaround because typeguards check_type function doesn't work with '|' notation
                 # but with Union.
                 param_annotation = Union[*param_annotation.__args__]
+            default_value = validator_signature.parameters[param_name].default
+            required = default_value == validator_signature.parameters[param_name].empty
             validator_param_infos[param_name] = ValidatorParamInfos(
                 attribute_path=attribute_path.split("."),
-                required=validator_signature.parameters[param_name].default
-                == validator_signature.parameters[param_name].empty,
+                required=required,
                 param_type=param_annotation,
+                value=default_value if not required else None,
             )
         validator_special_params: dict[str, Any] = {}
         for param_name, param in validator_signature.parameters.items():
@@ -316,6 +363,7 @@ class ValidatorSet(Generic[DataSetT]):
             if param_infos.provided:
                 arguments[param_name] = current_obj
                 check_type(param_name, current_obj, param_infos.param_type)
+                param_infos.value = current_obj
         for special_param_name, special_param_type in self.field_validators[validator].special_params.items():
             match special_param_name:
                 case "_param_infos":
@@ -346,6 +394,7 @@ class ValidatorSet(Generic[DataSetT]):
                     f"Couldn't fill in parameter for validator function: {error}",
                     error,
                     validator,
+                    self,
                 )
         return coroutines
 
@@ -386,6 +435,7 @@ class ValidatorSet(Generic[DataSetT]):
                     f"{', '.join(_dep[0].__name__ for _dep in dep_exceptions)}",
                     RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
                     validator,
+                    self,
                 )
                 return
             try:
@@ -399,12 +449,14 @@ class ValidatorSet(Generic[DataSetT]):
                     f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution.",
                     error,
                     validator,
+                    self,
                 )
             except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
                 error_handler.catch(
                     f"Uncaught exception raised in validator: {error_in_validator}",
                     error_in_validator,
                     validator,
+                    self,
                 )
 
         task_schedule[validator] = task_group.create_task(_wrapper())
