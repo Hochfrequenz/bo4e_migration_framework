@@ -7,8 +7,9 @@ import logging
 import types
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeVar, Union
+from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeGuard, TypeVar, Union
 
+from frozendict import frozendict
 from typeguard import check_type
 
 from bomf.model import Bo4eDataSet
@@ -16,6 +17,22 @@ from bomf.model import Bo4eDataSet
 _logger = logging.getLogger(__name__)
 DataSetT = TypeVar("DataSetT", bound=Bo4eDataSet)
 ValidatorType: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
+ParameterMapType: TypeAlias = dict[str, str]
+_ParameterMapInternType: TypeAlias = frozendict[str, str]
+_ValidatorMapInternIndexType: TypeAlias = tuple[ValidatorType, _ParameterMapInternType]
+
+
+def _is_validator_type(
+    value: ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType
+) -> TypeGuard[ValidatorType]:
+    """
+    Returns `True` if the provided value is of type `ValidatorType`. Otherwise, returns `False`.
+    """
+    try:
+        check_type("", value, ValidatorType)
+        return True
+    except TypeError:
+        return False
 
 
 class ValidationError(RuntimeError):
@@ -23,8 +40,15 @@ class ValidationError(RuntimeError):
     A unified schema for error messages occurring during validation.
     """
 
-    def __init__(self, message_detail: str, data_set: Bo4eDataSet, cause: Exception):
-        message = f"Validation error for {data_set.__class__.__name__}(id={data_set.get_id()}): {message_detail}"
+    def __init__(
+        self, message_detail: str, cause: Exception, data_set: Bo4eDataSet, validator: _ValidatorMapInternIndexType
+    ):
+        message = (
+            f"Validation error: {message_detail}\n"
+            f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
+            f"\tValidator function: {validator[0].__name__}"
+            f"\tParameter mapping: {validator[1]}"
+        )
         super().__init__(message)
         self.__cause__ = cause
 
@@ -38,23 +62,29 @@ class ErrorHandler:
 
     def __init__(self, data_set: Bo4eDataSet):
         self.data_set = data_set
-        self.excs: dict[ValidatorType, Exception] = {}
+        self.excs: dict[_ValidatorMapInternIndexType, Exception] = {}
 
-    def catch(self, msg: str, error: Exception, validator_func: ValidatorType):
+    def catch(
+        self,
+        msg: str,
+        error: Exception,
+        validator: _ValidatorMapInternIndexType,
+    ):
         """
         Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
         validation error.
         """
         error_nested = ValidationError(
             msg,
-            self.data_set,
             error,
+            self.data_set,
+            validator,
         )
         _logger.exception(
             str(error_nested),
             exc_info=error_nested,
         )
-        self.excs[validator_func] = error_nested
+        self.excs[validator] = error_nested
 
 
 @dataclass
@@ -85,7 +115,7 @@ class _ValidatorInfos:
     error will be raised. If the timeout is not specified (`None`), the validator will not be stopped.
     """
 
-    depends_on: list[ValidatorType]
+    depends_on: list[_ValidatorMapInternIndexType]
     # Contains a list of validator functions on which this validator function depends.
     timeout: Optional[timedelta]
     # Contains the (optional) timeout time after which the validator function will be cancelled.
@@ -104,7 +134,7 @@ class ValidatorSet(Generic[DataSetT]):
     """
 
     def __init__(self):
-        self.field_validators: dict[ValidatorType, _ValidatorInfos] = {}
+        self.field_validators: dict[_ValidatorMapInternIndexType, _ValidatorInfos] = {}
         self._data_set_type: Optional[type[DataSetT]] = None
         self.special_params: dict[str, Any] = {"_param_infos": dict[str, ValidatorParamInfos]}
 
@@ -122,12 +152,59 @@ class ValidatorSet(Generic[DataSetT]):
             # argument.
         return self._data_set_type
 
+    def get_map_indices(self, validator_func: ValidatorType) -> list[_ValidatorMapInternIndexType]:
+        """
+        Find all registered map indices for a given validator function. There can be multiple results if the same
+        validator function got registered multiple times but with different parameter mappings.
+        """
+        matching_indices: list[_ValidatorMapInternIndexType] = []
+        for map_index in self.field_validators:
+            if map_index[0] == validator_func:
+                matching_indices.append(map_index)
+        return matching_indices
+
+    def _narrow_supplied_dependencies(
+        self, depends_on: list[ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType]
+    ) -> list[_ValidatorMapInternIndexType]:
+        """
+        If a dependency has no parameter map explicitly defined, this functions tries to determine the correct
+        validator. If the same validator got registered multiple times you have to define the parameter map. Otherwise,
+        this function will raise a ValueError. It will also raise a ValueError if the validator function isn't
+        registered at all.
+        """
+        narrowed_depends_on: list[_ValidatorMapInternIndexType] = []
+        narrowed_dependency: _ValidatorMapInternIndexType
+        for dependency in depends_on:
+            if _is_validator_type(dependency):
+                possible_deps = self.get_map_indices(dependency)
+                if len(possible_deps) == 0:
+                    raise ValueError(f"The specified dependency is not registered: {dependency.__name__}")
+                if len(possible_deps) > 1:
+                    raise ValueError(
+                        f"The dependency {dependency.__name__} got registered multiple times. You have "
+                        "to define the parameter mapping for the dependency to resolve the ambiguity."
+                    )
+                narrowed_dependency = possible_deps[0]
+            else:
+                assert isinstance(dependency, tuple)  # make mypy happy
+                if not isinstance(dependency[1], frozendict):
+                    narrowed_dependency = (dependency[0], frozendict(dependency[1]))
+                else:
+                    narrowed_dependency = dependency
+
+            if narrowed_dependency not in self.field_validators:
+                raise ValueError(f"The specified dependency is not registered: {narrowed_dependency}")
+            narrowed_depends_on.append(narrowed_dependency)
+        return narrowed_depends_on
+
     # pylint: disable=too-many-branches
     def register(
         self,
         validator_func: ValidatorType,
-        parameter_map: dict[str, str],
-        depends_on: Optional[list[ValidatorType]] = None,
+        parameter_map: ParameterMapType,
+        depends_on: Optional[
+            list[ValidatorType | tuple[ValidatorType, ParameterMapType] | _ValidatorMapInternIndexType]
+        ] = None,
         timeout: Optional[timedelta] = None,
     ) -> None:
         """
@@ -163,9 +240,8 @@ class ValidatorSet(Generic[DataSetT]):
         """
         if depends_on is None:
             depends_on = []
-        for dependency in depends_on:
-            if dependency not in self.field_validators:
-                raise ValueError(f"The specified dependency is not registered: {dependency.__name__}")
+        narrowed_depends_on: list[_ValidatorMapInternIndexType] = self._narrow_supplied_dependencies(depends_on)
+
         if not asyncio.iscoroutinefunction(validator_func):
             raise ValueError("The provided validator function has to be a coroutine (e.g. use async).")
         if any(mapped_param in self.special_params for mapped_param in parameter_map):
@@ -209,20 +285,20 @@ class ValidatorSet(Generic[DataSetT]):
                 validator_special_params[param_name] = param.annotation
 
         _logger.debug("Registered validator function: %s", validator_func.__name__)
-        self.field_validators[validator_func] = _ValidatorInfos(
-            depends_on=depends_on,
+        self.field_validators[(validator_func, frozendict(parameter_map))] = _ValidatorInfos(
+            depends_on=narrowed_depends_on,
             timeout=timeout,
             param_infos=validator_param_infos,
             special_params=validator_special_params,
         )
 
-    def _fill_params(self, validator_func: ValidatorType, data_set: DataSetT) -> Coroutine[Any, Any, None]:
+    def _fill_params(self, validator: _ValidatorMapInternIndexType, data_set: DataSetT) -> Coroutine[Any, Any, None]:
         """
         This function fills the arguments of the validator function with the respective values in the data set
         and returns the coroutine.
         """
         arguments: dict[str, Any] = {}
-        for param_name, param_infos in self.field_validators[validator_func].param_infos.items():
+        for param_name, param_infos in self.field_validators[validator].param_infos.items():
             current_obj: Any = data_set
             param_infos.provided = True
             for index, attr_name in enumerate(param_infos.attribute_path):
@@ -240,47 +316,47 @@ class ValidatorSet(Generic[DataSetT]):
             if param_infos.provided:
                 arguments[param_name] = current_obj
                 check_type(param_name, current_obj, param_infos.param_type)
-        for special_param_name, special_param_type in self.field_validators[validator_func].special_params.items():
+        for special_param_name, special_param_type in self.field_validators[validator].special_params.items():
             match special_param_name:
                 case "_param_infos":
-                    arguments[special_param_name] = self.field_validators[validator_func].param_infos
+                    arguments[special_param_name] = self.field_validators[validator].param_infos
                     check_type(
                         special_param_name,
-                        self.field_validators[validator_func].param_infos,
+                        self.field_validators[validator].param_infos,
                         self.special_params[special_param_name],
                     )
                 case _:
                     raise NotImplementedError(f"No implementation for special parameter {special_param_name}")
             check_type(special_param_name, arguments[special_param_name], special_param_type)
-        return validator_func(**arguments)
+        return validator[0](**arguments)
 
     def _prepare_coroutines(
         self, data_set: DataSetT, error_handler: ErrorHandler
-    ) -> dict[ValidatorType, Coroutine[Any, Any, None]]:
+    ) -> dict[_ValidatorMapInternIndexType, Coroutine[Any, Any, None]]:
         """
         This function fills the arguments of all validator functions with the respective values in the data set
         and returns the coroutines for each validator function as a dictionary.
         """
-        coroutines: dict[ValidatorType, Coroutine[Any, Any, None]] = {}
-        for validator_func in self.field_validators:
+        coroutines: dict[_ValidatorMapInternIndexType, Coroutine[Any, Any, None]] = {}
+        for validator in self.field_validators:
             try:
-                coroutines[validator_func] = self._fill_params(validator_func, data_set)
+                coroutines[validator] = self._fill_params(validator, data_set)
             except AttributeError as error:
                 error_handler.catch(
-                    f"Couldn't fill in parameter for validator function {validator_func.__name__}: {error}",
+                    f"Couldn't fill in parameter for validator function: {error}",
                     error,
-                    validator_func,
+                    validator,
                 )
         return coroutines
 
     # pylint: disable=too-many-arguments
     def _register_task(
         self,
-        validator_func: ValidatorType,
+        validator: _ValidatorMapInternIndexType,
         validator_infos: _ValidatorInfos,
         task_group: asyncio.TaskGroup,
-        task_schedule: dict[ValidatorType, asyncio.Task[None]],
-        coroutines: dict[ValidatorType, Coroutine[Any, Any, None]],
+        task_schedule: dict[_ValidatorMapInternIndexType, asyncio.Task[None]],
+        coroutines: dict[_ValidatorMapInternIndexType, Coroutine[Any, Any, None]],
         error_handler: ErrorHandler,
     ) -> None:
         """
@@ -288,7 +364,7 @@ class ValidatorSet(Generic[DataSetT]):
         It has to be recursive to ensure that if the validator function depends on other validators that these have
         already registered tasks - or register them if necessary.
         """
-        dep_tasks: dict[ValidatorType, asyncio.Task[None]] = {}
+        dep_tasks: dict[_ValidatorMapInternIndexType, asyncio.Task[None]] = {}
         for dep in validator_infos.depends_on:
             if dep not in task_schedule:
                 self._register_task(
@@ -301,38 +377,37 @@ class ValidatorSet(Generic[DataSetT]):
         async def _wrapper() -> Any:
             if len(dep_tasks) > 0:
                 await asyncio.wait(dep_tasks.values(), return_when=asyncio.ALL_COMPLETED)
-            dep_exceptions: dict[ValidatorType, Exception] = {
-                dep: error_handler.excs[dep] for dep in dep_tasks if dep in error_handler.excs
+            dep_exceptions: dict[_ValidatorMapInternIndexType, Exception] = {
+                _dep: error_handler.excs[_dep] for _dep in dep_tasks if _dep in error_handler.excs
             }
             if len(dep_exceptions) > 0:
                 error_handler.catch(
                     "Execution abandoned due to uncaught exceptions in dependent validators: "
-                    f"{', '.join(dep.__name__ for dep in dep_exceptions)}",
+                    f"{', '.join(_dep[0].__name__ for _dep in dep_exceptions)}",
                     RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
-                    validator_func,
+                    validator,
                 )
                 return
             try:
                 return await asyncio.wait_for(
-                    coroutines[validator_func],
+                    coroutines[validator],
                     validator_infos.timeout.total_seconds() if validator_infos.timeout is not None else None,
                 )
             except TimeoutError as error:
                 assert validator_infos.timeout is not None  # This shouldn't happen, but type checker cries
                 error_handler.catch(
-                    f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution of "
-                    f"validator '{validator_func.__name__}'",
+                    f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution.",
                     error,
-                    validator_func,
+                    validator,
                 )
             except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
                 error_handler.catch(
-                    f"Uncaught exception raised in validator {validator_func.__name__}: {error_in_validator}",
+                    f"Uncaught exception raised in validator: {error_in_validator}",
                     error_in_validator,
-                    validator_func,
+                    validator,
                 )
 
-        task_schedule[validator_func] = task_group.create_task(_wrapper())
+        task_schedule[validator] = task_group.create_task(_wrapper())
 
     async def validate(self, *data_sets: DataSetT) -> None:
         """
@@ -344,16 +419,16 @@ class ValidatorSet(Generic[DataSetT]):
         for data_set in data_sets:
             error_handler = ErrorHandler(data_set)
             coroutines = self._prepare_coroutines(data_set, error_handler)
-            task_schedule: dict[ValidatorType, asyncio.Task[None]] = {}
+            task_schedule: dict[_ValidatorMapInternIndexType, asyncio.Task[None]] = {}
             async with asyncio.TaskGroup() as task_group:
-                for validator_func, validator_infos in self.field_validators.items():
-                    if validator_func not in coroutines:
+                for validator, validator_infos in self.field_validators.items():
+                    if validator not in coroutines:
                         # If the coroutine could not be prepared, i.e. if there were problems with the parameters,
                         # it should just be skipped here and raised by the error handler later.
                         continue
-                    if validator_func not in task_schedule:
+                    if validator not in task_schedule:
                         self._register_task(
-                            validator_func,
+                            validator,
                             validator_infos,
                             task_group,
                             task_schedule,

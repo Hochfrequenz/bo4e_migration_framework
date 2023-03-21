@@ -3,6 +3,7 @@ from datetime import timedelta
 from typing import Optional
 
 import pytest
+from frozendict import frozendict
 from pydantic import BaseModel, Required
 
 from bomf import ValidatorSet
@@ -24,6 +25,15 @@ class DataSetTest(Bo4eDataSet):
 
 dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper.construct(x="Hello"))
 finishing_order: list[ValidatorType]
+
+
+async def check_multiple_registration(_param_infos: dict[str, ValidatorParamInfos], x: str):
+    assert _param_infos["x"].attribute_path in (["x"], ["z", "x"])
+    if _param_infos["x"].attribute_path == ["x"]:
+        assert x == "lo16"
+    else:
+        assert x == "Hello"
+    finishing_order.append(check_multiple_registration)
 
 
 async def check_x_expensive(x: str) -> None:
@@ -110,6 +120,16 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         assert validator_set.data_set_type == DataSetTest
 
+    async def test_generic_type_fail(self):
+        """
+        This test ensures, that the data_set_type property works as expected.
+        """
+        validator_set = ValidatorSet()  # type:ignore[var-annotated]
+        with pytest.raises(TypeError) as exc:
+            _ = validator_set.data_set_type
+
+        assert "You have to use an instance of ValidatorSet and define the generic type." == str(exc.value)
+
     async def test_async_validation(self):
         """
         This test checks if the validation functions run concurrently by just ensuring that the expensive task
@@ -133,9 +153,24 @@ class TestValidation:
         finishing_order = []
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive, {"x": "x"})
-        validator_set.register(check_xy_ending, {"x": "x", "y": "y"}, depends_on=[check_x_expensive])
+        validator_set.register(check_multiple_registration, {"x": "x"})
+        validator_set.register(check_multiple_registration, {"x": "z.x"})
+        validator_set.register(
+            check_xy_ending,
+            {"x": "x", "y": "y"},
+            depends_on=[
+                check_x_expensive,
+                (check_multiple_registration, {"x": "x"}),
+                (check_multiple_registration, frozendict({"x": "z.x"})),
+            ],
+        )
         await validator_set.validate(dataset_instance)
-        assert finishing_order == [check_x_expensive, check_xy_ending]
+        assert finishing_order == [
+            check_multiple_registration,
+            check_multiple_registration,
+            check_x_expensive,
+            check_xy_ending,
+        ]
 
     async def test_depend_and_async_validation(self):
         """
@@ -208,6 +243,22 @@ class TestValidation:
 
         assert str(error.value) == expected_error
 
+    async def test_illegal_dependency_registration(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        with pytest.raises(ValueError) as exc:
+            validator_set.register(check_fail, {"x": "x"}, depends_on=[check_multiple_registration])
+        assert "The specified dependency is not registered: check_multiple_registration" == str(exc.value)
+
+        validator_set.register(check_multiple_registration, {"x": "x"})
+        validator_set.register(check_multiple_registration, {"x": "z.x"})
+
+        with pytest.raises(ValueError) as exc:
+            validator_set.register(check_fail, {"x": "x"}, depends_on=[check_multiple_registration])
+        assert (
+            "The dependency check_multiple_registration got registered multiple times. You have "
+            "to define the parameter mapping for the dependency to resolve the ambiguity." == str(exc.value)
+        )
+
     @pytest.mark.parametrize(
         ["validator_func", "param_map", "expected_error"],
         [
@@ -230,6 +281,8 @@ class TestValidation:
         validator_set.register(validator_func, param_map)
         with pytest.raises(TypeError) as error:
             await validator_set.validate(dataset_instance)
+        validator_set.register(check_multiple_registration, {"x": "x"})
+        validator_set.register(check_multiple_registration, {"x": "z.x"})
 
         assert str(error.value) == expected_error
 
@@ -240,7 +293,8 @@ class TestValidation:
             await validator_set.validate(dataset_instance)
         sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
         assert len(sub_exception_msgs) == 1
-        assert "Timeout (0.1s) during execution of validator 'check_x_expensive'" in sub_exception_msgs[0]
+        assert "Timeout (0.1s) during execution" in sub_exception_msgs[0]
+        assert "Validator function: check_x_expensive" in sub_exception_msgs[0]
 
     async def test_unprovided_but_required(self):
         validator_set = ValidatorSet[DataSetTest]()
@@ -252,6 +306,15 @@ class TestValidation:
         assert "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z." in str(
             error_group.value.exceptions[0]
         )
+
+    async def test_multiple_validator_registration(self):
+        global finishing_order
+        finishing_order = []
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_multiple_registration, {"x": "x"})
+        validator_set.register(check_multiple_registration, {"x": "z.x"})
+        await validator_set.validate(dataset_instance)
+        assert len(finishing_order) == 2
 
     async def test_map_special_param(self):
         validator_set = ValidatorSet[DataSetTest]()
