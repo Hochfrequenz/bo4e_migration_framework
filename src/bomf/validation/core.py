@@ -55,6 +55,7 @@ class ValidationError(RuntimeError):
     A unified schema for error messages occurring during validation.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         message_detail: str,
@@ -139,11 +140,11 @@ class ValidatorParamInfos:
         """
         Returns a string representation to summarize information about the parameter. Mainly used by error handling.
         """
-        return "value='%s', attribute_path='%s', %s, %s" % (
-            str(self.value),
-            ".".join(self.attribute_path),
-            "required" if self.required else "optional",
-            "provided" if self.provided else "unprovided",
+        return (
+            f"value='{str(self.value)}', "
+            f"attribute_path='{'.'.join(self.attribute_path)}', "
+            f"{'required' if self.required else 'optional'}, "
+            f"{'provided' if self.provided else 'unprovided'}"
         )
 
     def __repr__(self):
@@ -241,7 +242,7 @@ class ValidatorSet(Generic[DataSetT]):
             narrowed_depends_on.append(narrowed_dependency)
         return narrowed_depends_on
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-locals
     def register(
         self,
         validator_func: ValidatorType,
