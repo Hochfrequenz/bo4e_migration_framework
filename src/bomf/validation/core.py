@@ -95,7 +95,7 @@ def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = N
 
 def _get_error_id(identifier: _IdentifierType) -> _IDType:
     """
-    Returns a unique UUID for the provided identifier.
+    Returns a unique ID for the provided identifier.
     """
     if identifier not in _ERROR_ID_MAP:
         new_error_id = None
