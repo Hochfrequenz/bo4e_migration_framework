@@ -7,7 +7,6 @@ import inspect
 import logging
 import random
 import types
-import uuid
 
 # import traceback
 from dataclasses import dataclass
@@ -57,22 +56,22 @@ def format_parameter_infos(
     return f"{output}\n{start_indent}" + "}"
 
 
-_IDENTIFIER_TYPE: TypeAlias = tuple[str, str, int]
-_ID_TYPE: TypeAlias = int
-_ERROR_ID_MAP: bidict[_IDENTIFIER_TYPE, _ID_TYPE] = bidict()
+_IdentifierType: TypeAlias = tuple[str, str, int]
+_IDType: TypeAlias = int
+_ERROR_ID_MAP: bidict[_IdentifierType, _IDType] = bidict()
 
 
-def _get_identifier(exc: Exception) -> _IDENTIFIER_TYPE:
+def _get_identifier(exc: Exception) -> _IdentifierType:
     """
     Returns the module name and line number inside the function and its function name where the exception was
     originally raised.
     This tuple serves as identifier to create an error ID later on.
     """
     current_traceback = exc.__traceback__
+    assert current_traceback is not None
     while current_traceback.tb_next is not None:
         current_traceback = current_traceback.tb_next
     raising_module_path = current_traceback.tb_frame.f_code.co_filename
-    current_traceback.tb_frame
     return (
         Path(raising_module_path).name,
         current_traceback.tb_frame.f_code.co_name,
@@ -80,14 +79,12 @@ def _get_identifier(exc: Exception) -> _IDENTIFIER_TYPE:
     )
 
 
-def _generate_new_id(identifier: _IDENTIFIER_TYPE, last_id: Optional[_ID_TYPE] = None) -> _ID_TYPE:
+def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = None) -> _IDType:
     """
     Generate a new random id with taking the identifier as seed. If last_id is provided it will be used as seed instead.
     """
     if last_id is not None:
-        _logger.debug(
-            f"Duplicated ID for {identifier} and {_ERROR_ID_MAP.__reversed__()[last_id]}. Generating new ID..."
-        )
+        _logger.debug("Duplicated ID for %s and %s. Generating new ID...", identifier, _ERROR_ID_MAP.inverse[last_id])
         random.seed(last_id)
     else:
         module_name_hash = int(hashlib.blake2s((identifier[0] + identifier[1]).encode(), digest_size=4).hexdigest(), 16)
@@ -96,7 +93,7 @@ def _generate_new_id(identifier: _IDENTIFIER_TYPE, last_id: Optional[_ID_TYPE] =
     return random.randint(1, 1000000000)
 
 
-def _get_error_id(identifier: _IDENTIFIER_TYPE) -> _ID_TYPE:
+def _get_error_id(identifier: _IdentifierType) -> _IDType:
     """
     Returns a unique UUID for the provided identifier.
     """
@@ -104,7 +101,7 @@ def _get_error_id(identifier: _IDENTIFIER_TYPE) -> _ID_TYPE:
         new_error_id = None
         while True:
             new_error_id = _generate_new_id(identifier, last_id=new_error_id)
-            if new_error_id not in _ERROR_ID_MAP.__reversed__():
+            if new_error_id not in _ERROR_ID_MAP.inverse:
                 break
         _ERROR_ID_MAP[identifier] = new_error_id
     return _ERROR_ID_MAP[identifier]
@@ -123,7 +120,7 @@ class ValidationError(RuntimeError):
         data_set: Bo4eDataSet,
         validator: _ValidatorMapInternIndexType,
         validator_set: "ValidatorSet",
-        custom_error_id: Optional[_ID_TYPE],
+        custom_error_id: Optional[_IDType],
     ):
         exc_id = _get_error_id(_get_identifier(cause)) if custom_error_id is None else custom_error_id
         formatted_param_infos = format_parameter_infos(
@@ -141,7 +138,7 @@ class ValidationError(RuntimeError):
         self.data_set = data_set
         self.validator = validator
         self.validator_set = validator_set
-        self.id = exc_id
+        self.error_id = exc_id
 
 
 # pylint: disable=too-few-public-methods
@@ -155,6 +152,7 @@ class ErrorHandler:
         self.data_set = data_set
         self.excs: dict[_ValidatorMapInternIndexType, Exception] = {}
 
+    # pylint: disable=too-many-arguments
     def catch(
         self,
         msg: str,

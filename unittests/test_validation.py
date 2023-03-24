@@ -354,10 +354,14 @@ class TestValidation:
             await validator_set.validate(dataset_instance)
 
         sub_exceptions1: dict[_ValidatorMapInternIndexType, ValidationError] = {
-            exception.validator: exception for exception in error_group1.value.exceptions
+            exception.validator: exception
+            for exception in error_group1.value.exceptions
+            if type(exception) == ValidationError
         }
         sub_exceptions2: dict[_ValidatorMapInternIndexType, ValidationError] = {
-            exception.validator: exception for exception in error_group2.value.exceptions
+            exception.validator: exception
+            for exception in error_group2.value.exceptions
+            if type(exception) == ValidationError
         }
         assert len(sub_exceptions1) == 5
         # This is a self-consistency check to ensure that there is no unwanted randomness in the program.
@@ -366,9 +370,9 @@ class TestValidation:
         }
         # Different errors in the same function should get different error IDs.
         assert (
-            sub_exceptions1[check_different_fails, frozendict({"x": "x"})].id
-            != sub_exceptions1[check_different_fails, frozendict({"x": "z.x"})].id
+            sub_exceptions1[check_different_fails, frozendict({"x": "x"})].error_id
+            != sub_exceptions1[check_different_fails, frozendict({"x": "z.x"})].error_id
         )
         # This ensures that the ID is constant across python sessions - as long as the line number of the raising
         # exception in `check_fail` doesn't change.
-        assert sub_exceptions1[check_fail, frozendict({"x": "x"})].id == 47799448
+        assert sub_exceptions1[check_fail, frozendict({"x": "x"})].error_id == 47799448
