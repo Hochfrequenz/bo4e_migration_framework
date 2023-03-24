@@ -2,13 +2,20 @@
 Contains core functionality to validate arbitrary Bo4eDataSets
 """
 import asyncio
+import hashlib
 import inspect
 import logging
+import random
 import types
+import uuid
+
+# import traceback
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeGuard, TypeVar, Union
 
+from bidict import bidict
 from frozendict import frozendict
 from typeguard import check_type
 
@@ -50,6 +57,59 @@ def format_parameter_infos(
     return f"{output}\n{start_indent}" + "}"
 
 
+_IDENTIFIER_TYPE: TypeAlias = tuple[str, str, int]
+_ID_TYPE: TypeAlias = int
+_ERROR_ID_MAP: bidict[_IDENTIFIER_TYPE, _ID_TYPE] = bidict()
+
+
+def _get_identifier(exc: Exception) -> _IDENTIFIER_TYPE:
+    """
+    Returns the module name and line number inside the function and its function name where the exception was
+    originally raised.
+    This tuple serves as identifier to create an error ID later on.
+    """
+    current_traceback = exc.__traceback__
+    while current_traceback.tb_next is not None:
+        current_traceback = current_traceback.tb_next
+    raising_module_path = current_traceback.tb_frame.f_code.co_filename
+    current_traceback.tb_frame
+    return (
+        Path(raising_module_path).name,
+        current_traceback.tb_frame.f_code.co_name,
+        current_traceback.tb_lineno - current_traceback.tb_frame.f_code.co_firstlineno,
+    )
+
+
+def _generate_new_id(identifier: _IDENTIFIER_TYPE, last_id: Optional[_ID_TYPE] = None) -> _ID_TYPE:
+    """
+    Generate a new random id with taking the identifier as seed. If last_id is provided it will be used as seed instead.
+    """
+    if last_id is not None:
+        _logger.debug(
+            f"Duplicated ID for {identifier} and {_ERROR_ID_MAP.__reversed__()[last_id]}. Generating new ID..."
+        )
+        random.seed(last_id)
+    else:
+        module_name_hash = int(hashlib.blake2s((identifier[0] + identifier[1]).encode(), digest_size=4).hexdigest(), 16)
+        random.seed(module_name_hash + identifier[2])
+    # This range has no further meaning, but you have to define it.
+    return random.randint(1, 1000000000)
+
+
+def _get_error_id(identifier: _IDENTIFIER_TYPE) -> _ID_TYPE:
+    """
+    Returns a unique UUID for the provided identifier.
+    """
+    if identifier not in _ERROR_ID_MAP:
+        new_error_id = None
+        while True:
+            new_error_id = _generate_new_id(identifier, last_id=new_error_id)
+            if new_error_id not in _ERROR_ID_MAP.__reversed__():
+                break
+        _ERROR_ID_MAP[identifier] = new_error_id
+    return _ERROR_ID_MAP[identifier]
+
+
 class ValidationError(RuntimeError):
     """
     A unified schema for error messages occurring during validation.
@@ -63,13 +123,16 @@ class ValidationError(RuntimeError):
         data_set: Bo4eDataSet,
         validator: _ValidatorMapInternIndexType,
         validator_set: "ValidatorSet",
+        custom_error_id: Optional[_ID_TYPE],
     ):
+        exc_id = _get_error_id(_get_identifier(cause)) if custom_error_id is None else custom_error_id
         formatted_param_infos = format_parameter_infos(
             validator[1], validator_set.field_validators[validator].param_infos, start_indent="\t\t"
         )
         message = (
-            f"Validation error: {message_detail}\n"
+            f"{message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
+            f"\tError ID: {exc_id}\n"
             f"\tValidator function: {validator[0].__name__}\n"
             f"\tParameter information: \n{formatted_param_infos}"
         )
@@ -78,6 +141,7 @@ class ValidationError(RuntimeError):
         self.data_set = data_set
         self.validator = validator
         self.validator_set = validator_set
+        self.id = exc_id
 
 
 # pylint: disable=too-few-public-methods
@@ -97,6 +161,7 @@ class ErrorHandler:
         error: Exception,
         validator: _ValidatorMapInternIndexType,
         validator_set: "ValidatorSet",
+        custom_error_id: Optional[int] = None,
     ):
         """
         Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
@@ -108,6 +173,7 @@ class ErrorHandler:
             self.data_set,
             validator,
             validator_set,
+            custom_error_id,
         )
         _logger.exception(
             str(error_nested),
@@ -395,6 +461,7 @@ class ValidatorSet(Generic[DataSetT]):
                     error,
                     validator,
                     self,
+                    custom_error_id=1,
                 )
         return coroutines
 
@@ -436,6 +503,7 @@ class ValidatorSet(Generic[DataSetT]):
                     RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
                     validator,
                     self,
+                    custom_error_id=2,
                 )
                 return
             try:
@@ -450,6 +518,7 @@ class ValidatorSet(Generic[DataSetT]):
                     error,
                     validator,
                     self,
+                    custom_error_id=3,
                 )
             except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
                 error_handler.catch(
