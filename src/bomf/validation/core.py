@@ -453,7 +453,7 @@ class ValidatorSet(Generic[DataSetT]):
         for validator in self.field_validators:
             try:
                 coroutines[validator] = self._fill_params(validator, data_set)
-            except AttributeError or TypeError as error:
+            except (AttributeError, TypeError) as error:
                 await error_handler.catch(
                     f"Couldn't fill in parameter for validator function: {error}",
                     error,
