@@ -286,12 +286,11 @@ class TestValidation:
     async def test_type_error(self, validator_func: ValidatorType, param_map: dict[str, str], expected_error: str):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(validator_func, param_map)
-        with pytest.raises(TypeError) as error:
+        with pytest.raises(ExceptionGroup) as error_group:
             await validator_set.validate(dataset_instance)
-        validator_set.register(check_multiple_registration, {"x": "x"})
-        validator_set.register(check_multiple_registration, {"x": "z.x"})
 
-        assert str(error.value) == expected_error
+        assert len(error_group.value.exceptions) == 1
+        assert expected_error in str(error_group.value.exceptions[0])
 
     async def test_timeout(self):
         validator_set = ValidatorSet[DataSetTest]()
