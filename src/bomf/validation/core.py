@@ -121,7 +121,6 @@ class ValidationError(RuntimeError):
         validator_set: "ValidatorSet",
         error_id: _IDType,
     ):
-        # exc_id = _get_error_id(_get_identifier(cause)) if custom_error_id is None else custom_error_id
         formatted_param_infos = format_parameter_infos(
             validator[1], validator_set.field_validators[validator].param_infos, start_indent="\t\t"
         )
