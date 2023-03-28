@@ -14,7 +14,7 @@ frozendict==2.3.5
     # via -r requirements.in
 iso3166==2.1.1
     # via bo4e
-pydantic==1.10.5
+pydantic==1.10.7
     # via
     #   -r requirements.in
     #   bo4e
