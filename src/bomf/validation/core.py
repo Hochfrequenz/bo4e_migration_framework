@@ -2,13 +2,17 @@
 Contains core functionality to validate arbitrary Bo4eDataSets
 """
 import asyncio
+import hashlib
 import inspect
 import logging
+import random
 import types
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 from typing import Any, Callable, Coroutine, Generic, Optional, TypeAlias, TypeGuard, TypeVar, Union
 
+from bidict import bidict
 from frozendict import frozendict
 from typeguard import check_type
 
@@ -50,6 +54,58 @@ def format_parameter_infos(
     return f"{output}\n{start_indent}" + "}"
 
 
+_IdentifierType: TypeAlias = tuple[str, str, int]
+_IDType: TypeAlias = int
+_ERROR_ID_MAP: bidict[_IdentifierType, _IDType] = bidict()
+
+
+def _get_identifier(exc: Exception) -> _IdentifierType:
+    """
+    Returns the module name and line number inside the function and its function name where the exception was
+    originally raised.
+    This tuple serves as identifier to create an error ID later on.
+    """
+    current_traceback = exc.__traceback__
+    assert current_traceback is not None
+    while current_traceback.tb_next is not None:
+        current_traceback = current_traceback.tb_next
+    raising_module_path = current_traceback.tb_frame.f_code.co_filename
+    return (
+        Path(raising_module_path).name,
+        current_traceback.tb_frame.f_code.co_name,
+        current_traceback.tb_lineno - current_traceback.tb_frame.f_code.co_firstlineno,
+    )
+
+
+def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = None) -> _IDType:
+    """
+    Generate a new random id with taking the identifier as seed. If last_id is provided it will be used as seed instead.
+    """
+    if last_id is not None:
+        _logger.debug("Duplicated ID for %s and %s. Generating new ID...", identifier, _ERROR_ID_MAP.inverse[last_id])
+        random.seed(last_id)
+    else:
+        module_name_hash = int(hashlib.blake2s((identifier[0] + identifier[1]).encode(), digest_size=4).hexdigest(), 16)
+        random.seed(module_name_hash + identifier[2])
+    # This range has no further meaning, but you have to define it.
+    return random.randint(1, 1000000000)
+
+
+async def _get_error_id(identifier: _IdentifierType) -> _IDType:
+    """
+    Returns a unique ID for the provided identifier.
+    """
+    if identifier not in _ERROR_ID_MAP:
+        new_error_id = None
+        async with asyncio.Lock():
+            while True:
+                new_error_id = _generate_new_id(identifier, last_id=new_error_id)
+                if new_error_id not in _ERROR_ID_MAP.inverse:
+                    break
+            _ERROR_ID_MAP[identifier] = new_error_id
+    return _ERROR_ID_MAP[identifier]
+
+
 class ValidationError(RuntimeError):
     """
     A unified schema for error messages occurring during validation.
@@ -63,13 +119,15 @@ class ValidationError(RuntimeError):
         data_set: Bo4eDataSet,
         validator: _ValidatorMapInternIndexType,
         validator_set: "ValidatorSet",
+        error_id: _IDType,
     ):
         formatted_param_infos = format_parameter_infos(
             validator[1], validator_set.field_validators[validator].param_infos, start_indent="\t\t"
         )
         message = (
-            f"Validation error: {message_detail}\n"
+            f"{message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
+            f"\tError ID: {error_id}\n"
             f"\tValidator function: {validator[0].__name__}\n"
             f"\tParameter information: \n{formatted_param_infos}"
         )
@@ -78,6 +136,7 @@ class ValidationError(RuntimeError):
         self.data_set = data_set
         self.validator = validator
         self.validator_set = validator_set
+        self.error_id = error_id
 
 
 # pylint: disable=too-few-public-methods
@@ -91,23 +150,27 @@ class ErrorHandler:
         self.data_set = data_set
         self.excs: dict[_ValidatorMapInternIndexType, Exception] = {}
 
-    def catch(
+    # pylint: disable=too-many-arguments
+    async def catch(
         self,
         msg: str,
         error: Exception,
         validator: _ValidatorMapInternIndexType,
         validator_set: "ValidatorSet",
+        custom_error_id: Optional[int] = None,
     ):
         """
         Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
         validation error.
         """
+        error_id = await _get_error_id(_get_identifier(error)) if custom_error_id is None else custom_error_id
         error_nested = ValidationError(
             msg,
             error,
             self.data_set,
             validator,
             validator_set,
+            error_id,
         )
         _logger.exception(
             str(error_nested),
@@ -378,7 +441,7 @@ class ValidatorSet(Generic[DataSetT]):
             check_type(special_param_name, arguments[special_param_name], special_param_type)
         return validator[0](**arguments)
 
-    def _prepare_coroutines(
+    async def _prepare_coroutines(
         self, data_set: DataSetT, error_handler: ErrorHandler
     ) -> dict[_ValidatorMapInternIndexType, Coroutine[Any, Any, None]]:
         """
@@ -389,17 +452,18 @@ class ValidatorSet(Generic[DataSetT]):
         for validator in self.field_validators:
             try:
                 coroutines[validator] = self._fill_params(validator, data_set)
-            except AttributeError as error:
-                error_handler.catch(
+            except (AttributeError, TypeError) as error:
+                await error_handler.catch(
                     f"Couldn't fill in parameter for validator function: {error}",
                     error,
                     validator,
                     self,
+                    custom_error_id=1,
                 )
         return coroutines
 
     # pylint: disable=too-many-arguments
-    def _register_task(
+    async def _register_task(
         self,
         validator: _ValidatorMapInternIndexType,
         validator_infos: _ValidatorInfos,
@@ -416,7 +480,7 @@ class ValidatorSet(Generic[DataSetT]):
         dep_tasks: dict[_ValidatorMapInternIndexType, asyncio.Task[None]] = {}
         for dep in validator_infos.depends_on:
             if dep not in task_schedule:
-                self._register_task(
+                await self._register_task(
                     dep, self.field_validators[dep], task_group, task_schedule, coroutines, error_handler
                 )
             dep_tasks[dep] = task_schedule[dep]
@@ -430,12 +494,13 @@ class ValidatorSet(Generic[DataSetT]):
                 _dep: error_handler.excs[_dep] for _dep in dep_tasks if _dep in error_handler.excs
             }
             if len(dep_exceptions) > 0:
-                error_handler.catch(
+                await error_handler.catch(
                     "Execution abandoned due to uncaught exceptions in dependent validators: "
                     f"{', '.join(_dep[0].__name__ for _dep in dep_exceptions)}",
                     RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
                     validator,
                     self,
+                    custom_error_id=2,
                 )
                 return
             try:
@@ -445,14 +510,15 @@ class ValidatorSet(Generic[DataSetT]):
                 )
             except TimeoutError as error:
                 assert validator_infos.timeout is not None  # This shouldn't happen, but type checker cries
-                error_handler.catch(
+                await error_handler.catch(
                     f"Timeout ({validator_infos.timeout.total_seconds()}s) during execution.",
                     error,
                     validator,
                     self,
+                    custom_error_id=3,
                 )
             except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
-                error_handler.catch(
+                await error_handler.catch(
                     f"Uncaught exception raised in validator: {error_in_validator}",
                     error_in_validator,
                     validator,
@@ -470,7 +536,7 @@ class ValidatorSet(Generic[DataSetT]):
         """
         for data_set in data_sets:
             error_handler = ErrorHandler(data_set)
-            coroutines = self._prepare_coroutines(data_set, error_handler)
+            coroutines = await self._prepare_coroutines(data_set, error_handler)
             task_schedule: dict[_ValidatorMapInternIndexType, asyncio.Task[None]] = {}
             async with asyncio.TaskGroup() as task_group:
                 for validator, validator_infos in self.field_validators.items():
@@ -479,7 +545,7 @@ class ValidatorSet(Generic[DataSetT]):
                         # it should just be skipped here and raised by the error handler later.
                         continue
                     if validator not in task_schedule:
-                        self._register_task(
+                        await self._register_task(
                             validator,
                             validator_infos,
                             task_group,

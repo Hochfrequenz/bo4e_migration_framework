@@ -8,7 +8,7 @@ from pydantic import BaseModel, Required
 
 from bomf import ValidatorSet
 from bomf.model import Bo4eDataSet
-from bomf.validation.core import ValidatorParamInfos, ValidatorType
+from bomf.validation.core import ValidationError, ValidatorParamInfos, ValidatorType, _ValidatorMapInternIndexType
 
 
 class Wrapper(BaseModel):
@@ -86,6 +86,13 @@ async def check_fail2(y: int) -> None:
 
 async def check_fail3(y: int) -> None:
     raise ValueError("This shouldn't be raised")
+
+
+async def check_different_fails(x: str):
+    if x == "Hello":
+        raise ValueError("Error 1")
+    else:
+        raise ValueError("Error 2")
 
 
 async def no_params():
@@ -279,12 +286,11 @@ class TestValidation:
     async def test_type_error(self, validator_func: ValidatorType, param_map: dict[str, str], expected_error: str):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(validator_func, param_map)
-        with pytest.raises(TypeError) as error:
+        with pytest.raises(ExceptionGroup) as error_group:
             await validator_set.validate(dataset_instance)
-        validator_set.register(check_multiple_registration, {"x": "x"})
-        validator_set.register(check_multiple_registration, {"x": "z.x"})
 
-        assert str(error.value) == expected_error
+        assert len(error_group.value.exceptions) == 1
+        assert expected_error in str(error_group.value.exceptions[0])
 
     async def test_timeout(self):
         validator_set = ValidatorSet[DataSetTest]()
@@ -332,3 +338,40 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_with_param_info, {"x": "x", "zz": "z.z"})
         await validator_set.validate(dataset_instance)
+
+    async def test_error_ids(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_fail, {"x": "x"})
+        validator_set.register(check_fail2, {"y": "y"})
+        validator_set.register(check_fail3, {"y": "y"}, depends_on=[check_fail])
+        validator_set.register(check_different_fails, {"x": "x"})
+        validator_set.register(check_different_fails, {"x": "z.x"})
+        with pytest.raises(ExceptionGroup) as error_group1:
+            await validator_set.validate(dataset_instance)
+        with pytest.raises(ExceptionGroup) as error_group2:
+            # This is just to ensure that the ID generation for the errors is not completely random and has consistency
+            await validator_set.validate(dataset_instance)
+
+        sub_exceptions1: dict[_ValidatorMapInternIndexType, ValidationError] = {
+            exception.validator: exception
+            for exception in error_group1.value.exceptions
+            if type(exception) == ValidationError
+        }
+        sub_exceptions2: dict[_ValidatorMapInternIndexType, ValidationError] = {
+            exception.validator: exception
+            for exception in error_group2.value.exceptions
+            if type(exception) == ValidationError
+        }
+        assert len(sub_exceptions1) == 5
+        # This is a self-consistency check to ensure that there is no unwanted randomness in the program.
+        assert {str(sub_exception1) for sub_exception1 in sub_exceptions1.values()} == {
+            str(sub_exception2) for sub_exception2 in sub_exceptions2.values()
+        }
+        # Different errors in the same function should get different error IDs.
+        assert (
+            sub_exceptions1[check_different_fails, frozendict({"x": "x"})].error_id
+            != sub_exceptions1[check_different_fails, frozendict({"x": "z.x"})].error_id
+        )
+        # This ensures that the ID is constant across python sessions - as long as the line number of the raising
+        # exception in `check_fail` doesn't change.
+        assert sub_exceptions1[check_fail, frozendict({"x": "x"})].error_id == 47799448

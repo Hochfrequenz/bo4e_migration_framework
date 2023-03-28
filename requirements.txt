@@ -6,6 +6,8 @@
 #
 attrs==22.2.0
     # via -r requirements.in
+bidict==0.22.1
+    # via -r requirements.in
 bo4e==0.4.7
     # via -r requirements.in
 frozendict==2.3.5
