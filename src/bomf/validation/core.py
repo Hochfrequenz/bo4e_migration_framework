@@ -125,7 +125,7 @@ class ValidationError(RuntimeError):
             validator[1], validator_set.field_validators[validator].param_infos, start_indent="\t\t"
         )
         message = (
-            f"{message_detail}\n"
+            f"{error_id}: {message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
             f"\tError ID: {error_id}\n"
             f"\tValidator function: {validator[0].__name__}\n"
@@ -454,7 +454,7 @@ class ValidatorSet(Generic[DataSetT]):
                 coroutines[validator] = self._fill_params(validator, data_set)
             except (AttributeError, TypeError) as error:
                 await error_handler.catch(
-                    f"Couldn't fill in parameter for validator function: {error}",
+                    f"Couldn't fill in parameter: {error}",
                     error,
                     validator,
                     self,
@@ -495,9 +495,9 @@ class ValidatorSet(Generic[DataSetT]):
             }
             if len(dep_exceptions) > 0:
                 await error_handler.catch(
-                    "Execution abandoned due to uncaught exceptions in dependent validators: "
+                    "Execution abandoned due to failing dependent validators: "
                     f"{', '.join(_dep[0].__name__ for _dep in dep_exceptions)}",
-                    RuntimeError(f"Uncaught exceptions in dependent validators: {list(dep_exceptions.keys())}"),
+                    RuntimeError(str(list(dep_exceptions.keys()))),
                     validator,
                     self,
                     custom_error_id=2,
@@ -519,7 +519,7 @@ class ValidatorSet(Generic[DataSetT]):
                 )
             except Exception as error_in_validator:  # pylint: disable=broad-exception-caught
                 await error_handler.catch(
-                    f"Uncaught exception raised in validator: {error_in_validator}",
+                    str(error_in_validator),
                     error_in_validator,
                     validator,
                     self,
