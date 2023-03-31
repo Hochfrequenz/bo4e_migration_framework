@@ -614,7 +614,7 @@ class ValidatorSet(Generic[DataSetT]):
     async def validate(self, *data_sets: DataSetT) -> ValidationSummary:
         """
         Validates each of the provided data set instances onto the registered validator functions.
-        Any errors occurring during validation will be collected and raised together as ExceptionGroup.
+        Any errors occurring during validation will be collected and returned via a `ValidationSummary` object.
         If a validator depends on other validators which are raising errors, the execution of this validator will be
         abandoned.
         """
@@ -638,10 +638,5 @@ class ValidatorSet(Generic[DataSetT]):
                             coroutines,
                             error_handlers[data_set],
                         )
-            # if len(error_handlers[data_set].excs) > 0:
-            #     raise ExceptionGroup(
-            #         f"Validation errors for {data_set.__class__.__name__}(id={data_set.get_id()})",
-            #         list(error_handlers[data_set].excs.values()),
-            #     )
 
         return ValidationSummary(self, error_handlers)
