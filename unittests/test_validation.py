@@ -147,7 +147,8 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive, {"x": "x"})
         validator_set.register(check_y_positive, {"y": "y"})
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
         assert finishing_order == [check_y_positive, check_x_expensive]
 
     async def test_depend_validation(self):
@@ -171,7 +172,8 @@ class TestValidation:
                 (check_multiple_registration, frozendict({"x": "z.x"})),
             ],
         )
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
         assert finishing_order == [
             check_multiple_registration,
             check_multiple_registration,
@@ -189,7 +191,8 @@ class TestValidation:
         validator_set.register(check_x_expensive, {"x": "x"})
         validator_set.register(check_y_positive, {"y": "y"})
         validator_set.register(check_xy_ending, {"x": "x", "y": "y"}, depends_on=[check_x_expensive, check_y_positive])
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
         assert finishing_order == [check_y_positive, check_x_expensive, check_xy_ending]
 
     async def test_failing_validation(self):
@@ -203,10 +206,10 @@ class TestValidation:
         validator_set.register(check_fail, {"x": "x"})
         validator_set.register(check_fail2, {"y": "y"})
         validator_set.register(check_fail3, {"y": "y"}, depends_on=[check_fail])
-        with pytest.raises(ExceptionGroup) as error_group:
-            await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
 
-        sub_exception_msgs = {str(exception) for exception in error_group.value.exceptions}
+        assert validation_summary.num_errors_total == 3
+        sub_exception_msgs = {str(exception) for exception in validation_summary.errors}
         assert any("I failed (on purpose! :O)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs)
         assert any(
             "I failed (on purpose! :O - again :OOO)" in sub_exception_msg for sub_exception_msg in sub_exception_msgs
@@ -215,7 +218,6 @@ class TestValidation:
             "Execution abandoned due to failing dependent validators" in sub_exception_msg
             for sub_exception_msg in sub_exception_msgs
         )
-        assert len(sub_exception_msgs) == 3
 
     @pytest.mark.parametrize(
         ["validator_func", "param_map", "expected_error"],
@@ -286,31 +288,28 @@ class TestValidation:
     async def test_type_error(self, validator_func: ValidatorType, param_map: dict[str, str], expected_error: str):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(validator_func, param_map)
-        with pytest.raises(ExceptionGroup) as error_group:
-            await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
 
-        assert len(error_group.value.exceptions) == 1
-        assert expected_error in str(error_group.value.exceptions[0])
+        assert validation_summary.num_errors_total == 1
+        assert expected_error in str(validation_summary.errors[0])
 
     async def test_timeout(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_x_expensive, {"x": "x"}, timeout=timedelta(milliseconds=100))
-        with pytest.raises(ExceptionGroup) as error_group:
-            await validator_set.validate(dataset_instance)
-        sub_exception_msgs = [str(exception) for exception in error_group.value.exceptions]
-        assert len(sub_exception_msgs) == 1
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 1
+        sub_exception_msgs = [str(exception) for exception in validation_summary.errors]
         assert "Timeout (0.1s) during execution" in sub_exception_msgs[0]
         assert "Validator function: check_x_expensive" in sub_exception_msgs[0]
 
     async def test_unprovided_but_required(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(unprovided_but_required, {"zz": "z.z"})
-        with pytest.raises(ExceptionGroup) as error_group:
-            await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
 
-        assert len(error_group.value.exceptions) == 1
+        assert validation_summary.num_errors_total == 1
         assert "zz is required but not existent in the provided data set. Couldn't find z in DataSetTest.z." in str(
-            error_group.value.exceptions[0]
+            validation_summary.errors[0]
         )
 
     async def test_multiple_validator_registration(self):
@@ -319,7 +318,8 @@ class TestValidation:
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_multiple_registration, {"x": "x"})
         validator_set.register(check_multiple_registration, {"x": "z.x"})
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
         assert len(finishing_order) == 2
 
     async def test_map_special_param(self):
@@ -332,12 +332,14 @@ class TestValidation:
     async def test_required_and_optional(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_required_and_optional, {"zx": "z.x", "zz": "z.z"})
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
 
     async def test_param_info(self):
         validator_set = ValidatorSet[DataSetTest]()
         validator_set.register(check_with_param_info, {"x": "x", "zz": "z.z"})
-        await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
 
     async def test_error_ids(self):
         validator_set = ValidatorSet[DataSetTest]()
@@ -346,21 +348,15 @@ class TestValidation:
         validator_set.register(check_fail3, {"y": "y"}, depends_on=[check_fail])
         validator_set.register(check_different_fails, {"x": "x"})
         validator_set.register(check_different_fails, {"x": "z.x"})
-        with pytest.raises(ExceptionGroup) as error_group1:
-            await validator_set.validate(dataset_instance)
-        with pytest.raises(ExceptionGroup) as error_group2:
-            # This is just to ensure that the ID generation for the errors is not completely random and has consistency
-            await validator_set.validate(dataset_instance)
+        validation_summary = await validator_set.validate(dataset_instance)
+        validation_summary2 = await validator_set.validate(dataset_instance)
+        # This is just to ensure that the ID generation for the errors is not completely random and has consistency
 
         sub_exceptions1: dict[_ValidatorMapInternIndexType, ValidationError] = {
-            exception.validator: exception
-            for exception in error_group1.value.exceptions
-            if type(exception) == ValidationError
+            exception.validator: exception for exception in validation_summary.errors
         }
         sub_exceptions2: dict[_ValidatorMapInternIndexType, ValidationError] = {
-            exception.validator: exception
-            for exception in error_group2.value.exceptions
-            if type(exception) == ValidationError
+            exception.validator: exception for exception in validation_summary2.errors
         }
         assert len(sub_exceptions1) == 5
         # This is a self-consistency check to ensure that there is no unwanted randomness in the program.

@@ -4,8 +4,10 @@ Contains core functionality to validate arbitrary Bo4eDataSets
 import asyncio
 import hashlib
 import inspect
+import itertools
 import logging
 import random
+import re
 import types
 from dataclasses import dataclass
 from datetime import timedelta
@@ -139,6 +141,85 @@ class ValidationError(RuntimeError):
         self.error_id = error_id
 
 
+class ValidationSummary:
+    """
+    This class provides some analysis of a validation process (`ValidatorSet.validate(*data_sets)`). It is read-only.
+    """
+
+    def __init__(
+        self,
+        validator_set: "ValidatorSet[DataSetT]",
+        error_handlers: dict[DataSetT, "ErrorHandler"],
+    ):
+        self.succeeded_data_sets: list[DataSetT] = []
+        "List of data sets which got validated without any errors"
+        self.data_set_errors: dict[DataSetT, list[ValidationError]] = {}
+        "Maps data sets in which errors got raised to a list of ValidationErrors"
+        for data_set, error_handler in error_handlers.items():
+            if len(error_handler.excs) > 0:
+                self.data_set_errors[data_set] = list(error_handler.excs.values())
+            else:
+                self.succeeded_data_sets.append(data_set)
+
+        self.total = len(error_handlers)
+        "Number of all validated data sets"
+        self.num_succeeds = len(self.succeeded_data_sets)
+        "Number of positively validated data sets (equivalent to `len(self.succeeded_data_sets)`)"
+        self.num_fails = len(self.data_set_errors)
+        "Number of negatively validated data sets (equivalent to `len(self.data_set_errors)`)"
+        self.data_set_type = validator_set.data_set_type
+        "The type of the data sets"
+
+        def _extract_error_id(validation_error: ValidationError) -> _IDType:
+            return validation_error.error_id
+
+        self.errors: list[ValidationError] = sorted(
+            itertools.chain.from_iterable(self.data_set_errors.values()),
+            key=_extract_error_id,
+        )
+        """
+        This is a complete list of all ValidationErrors from all validated data sets.
+        It is sorted by their error ID to enable grouping by it using itertools.
+        """
+        self.num_errors_total = len(self.errors)
+        "Number of errors from all data sets in total"
+        self.num_errors_per_id: dict[_IDType, int] = {
+            key: sum(1 for _ in values_iter)
+            for key, values_iter in itertools.groupby(self.errors, key=_extract_error_id)
+        }
+        """
+        This is a dictionary which maps the error ID to the number of times it occurred
+        (taking all data sets into account).
+        """
+        self._initialized = True
+
+    def __setattr__(self, key, value):
+        """
+        ValidationSummary is read-only. But it allows mutation during initialization.
+        """
+        if hasattr(self, "_initialized"):
+            raise AttributeError("This object is read-only.")
+        else:
+            super().__setattr__(key, value)
+
+    def __delattr__(self, item):
+        """
+        ValidationSummary is read-only.
+        """
+        raise AttributeError("This object is read-only.")
+
+    def summarize(self, with_errors_per_id: bool = True, indent: str = "", add_indent: str = "\t") -> str:
+        result = (
+            f"{indent}{self.total} data sets, "
+            f"{self.num_succeeds} succeeds, "
+            f"{self.num_fails} fails, "
+            f"{self.num_errors_total} errors"
+        )
+        if with_errors_per_id:
+            result += f"\n{indent}{add_indent}{self.num_errors_per_id} Error ID -> count"
+        return result
+
+
 # pylint: disable=too-few-public-methods
 class ErrorHandler:
     """
@@ -148,7 +229,7 @@ class ErrorHandler:
 
     def __init__(self, data_set: Bo4eDataSet):
         self.data_set = data_set
-        self.excs: dict[_ValidatorMapInternIndexType, Exception] = {}
+        self.excs: dict[_ValidatorMapInternIndexType, ValidationError] = {}
 
     # pylint: disable=too-many-arguments
     async def catch(
@@ -502,6 +583,7 @@ class ValidatorSet(Generic[DataSetT]):
                     self,
                     custom_error_id=2,
                 )
+                coroutines[validator].close()
                 return
             try:
                 return await asyncio.wait_for(
@@ -527,16 +609,17 @@ class ValidatorSet(Generic[DataSetT]):
 
         task_schedule[validator] = task_group.create_task(_wrapper())
 
-    async def validate(self, *data_sets: DataSetT) -> None:
+    async def validate(self, *data_sets: DataSetT) -> ValidationSummary:
         """
         Validates each of the provided data set instances onto the registered validator functions.
         Any errors occurring during validation will be collected and raised together as ExceptionGroup.
         If a validator depends on other validators which are raising errors, the execution of this validator will be
         abandoned.
         """
+        error_handlers: dict[DataSetT, ErrorHandler] = {}
         for data_set in data_sets:
-            error_handler = ErrorHandler(data_set)
-            coroutines = await self._prepare_coroutines(data_set, error_handler)
+            error_handlers[data_set] = ErrorHandler(data_set)
+            coroutines = await self._prepare_coroutines(data_set, error_handlers[data_set])
             task_schedule: dict[_ValidatorMapInternIndexType, asyncio.Task[None]] = {}
             async with asyncio.TaskGroup() as task_group:
                 for validator, validator_infos in self.field_validators.items():
@@ -551,10 +634,12 @@ class ValidatorSet(Generic[DataSetT]):
                             task_group,
                             task_schedule,
                             coroutines,
-                            error_handler,
+                            error_handlers[data_set],
                         )
-            if len(error_handler.excs) > 0:
-                raise ExceptionGroup(
-                    f"Validation errors for {data_set.__class__.__name__}(id={data_set.get_id()})",
-                    list(error_handler.excs.values()),
-                )
+            # if len(error_handlers[data_set].excs) > 0:
+            #     raise ExceptionGroup(
+            #         f"Validation errors for {data_set.__class__.__name__}(id={data_set.get_id()})",
+            #         list(error_handlers[data_set].excs.values()),
+            #     )
+
+        return ValidationSummary(self, error_handlers)
