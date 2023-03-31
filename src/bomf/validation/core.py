@@ -7,7 +7,6 @@ import inspect
 import itertools
 import logging
 import random
-import re
 import types
 from dataclasses import dataclass
 from datetime import timedelta
@@ -141,6 +140,7 @@ class ValidationError(RuntimeError):
         self.error_id = error_id
 
 
+# pylint: disable=too-many-instance-attributes
 class ValidationSummary:
     """
     This class provides some analysis of a validation process (`ValidatorSet.validate(*data_sets)`). It is read-only.
@@ -199,8 +199,7 @@ class ValidationSummary:
         """
         if hasattr(self, "_initialized"):
             raise AttributeError("This object is read-only.")
-        else:
-            super().__setattr__(key, value)
+        super().__setattr__(key, value)
 
     def __delattr__(self, item):
         """
@@ -209,6 +208,9 @@ class ValidationSummary:
         raise AttributeError("This object is read-only.")
 
     def summarize(self, with_errors_per_id: bool = True, indent: str = "", add_indent: str = "\t") -> str:
+        """
+        Returns a short string representation to give a minimal summary about the validation process.
+        """
         result = (
             f"{indent}{self.total} data sets, "
             f"{self.num_succeeds} succeeds, "
