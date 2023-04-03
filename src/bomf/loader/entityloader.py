@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, List, Optional, TypeVar
 
 import attrs
-from pydantic import BaseModel
+from pydantic import BaseModel  # pylint:disable[no-name-in-module]
 
 _TargetEntity = TypeVar("_TargetEntity")
 
@@ -170,7 +170,8 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
 _PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
 
 
-class _ListOfPydanticModels(BaseModel):
+# pylint:disable=too-few-public-methods
+class _ListOfPydanticModels(BaseModel, Generic[_PydanticTargetModel]):
     # https://stackoverflow.com/a/58641115/10009545
     # for the instantiation see the serialization unit test
     __root__: List[_PydanticTargetModel]
