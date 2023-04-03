@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, List, Optional, TypeVar
 
 import attrs
-from pydantic import BaseModel  # pylint:disable[no-name-in-module]
+from pydantic import BaseModel  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
