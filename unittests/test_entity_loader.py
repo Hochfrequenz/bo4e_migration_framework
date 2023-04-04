@@ -1,6 +1,10 @@
+import json
+from pathlib import Path
 from typing import Optional
 
-from bomf.loader.entityloader import EntityLoader, EntityLoadingResult
+from pydantic import BaseModel
+
+from bomf.loader.entityloader import EntityLoader, EntityLoadingResult, PydanticJsonFileEntityLoader
 
 
 class _ExampleEntity:
@@ -103,3 +107,25 @@ class TestEntityLoader:
         assert result.loaded_at is None
         assert result.verified_at is None
         assert isinstance(result.loading_error, ValueError) is True
+
+
+class MyPydanticClass(BaseModel):
+    foo: str
+    bar: int
+
+
+class MyLoader(PydanticJsonFileEntityLoader[MyPydanticClass]):
+    """entity loader fo my pydantic class"""
+
+
+class TestJsonFileEntityLoader:
+    async def test_dumping_to_file(self, tmp_path):
+        my_entities = [MyPydanticClass(foo="asd", bar=123), MyPydanticClass(foo="qwe", bar=456)]
+        file_path = Path(tmp_path) / Path("foo.json")
+        my_loader = MyLoader(file_path)
+        await my_loader.load_entities(my_entities)
+        del my_loader
+        with open(file_path, "r", encoding="utf-8") as infile:
+            json_body = json.load(infile)
+        assert len(json_body) == 2
+        assert json_body == [{"foo": "asd", "bar": 123}, {"foo": "qwe", "bar": 456}]

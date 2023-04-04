@@ -2,11 +2,14 @@
 entity loaders load entities into the target system
 """
 import asyncio
+import json
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Awaitable, Generic, List, Optional, TypeVar
+from pathlib import Path
+from typing import Awaitable, Callable, Generic, List, Optional, TypeVar
 
 import attrs
+from pydantic import BaseModel  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
@@ -136,3 +139,51 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
         tasks: List[Awaitable[LoadingSummary]] = [self.load(entity) for entity in entities]
         result = await asyncio.gather(*tasks)
         return result
+
+
+class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
+    """
+    an entity loader that produces a json file as result. This is specifically useful in unit tests
+    """
+
+    async def verify(self, entity: _TargetEntity, id_in_target_system: Optional[str] = None) -> bool:
+        return True
+
+    def __init__(self, file_path: Path, list_encoder: Callable[[List[_TargetEntity]], List[dict]]):
+        """provide a path to a json file (will be created if not exists and overwritten if exists)"""
+        self._file_path = file_path
+        self._list_encoder = list_encoder
+        self._entities: List[_TargetEntity] = []
+
+    async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
+        self._entities.append(entity)
+        return None
+
+    async def load_entities(self, entities: List[_TargetEntity]) -> List[LoadingSummary]:
+        base_result = await super().load_entities(entities)
+        dict_list = self._list_encoder(self._entities)
+        with open(self._file_path, "w+", encoding="utf-8") as outfile:
+            json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
+        return base_result
+
+
+_PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
+
+
+# pylint:disable=too-few-public-methods
+class _ListOfPydanticModels(BaseModel, Generic[_PydanticTargetModel]):
+    # https://stackoverflow.com/a/58641115/10009545
+    # for the instantiation see the serialization unit test
+    __root__: List[_PydanticTargetModel]
+
+
+class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
+    """
+    A json file entity loader specifically for pydantic models
+    """
+
+    def __init__(self, file_path: Path):
+        """provide a file path"""
+        super().__init__(
+            file_path=file_path, list_encoder=lambda x: json.loads(_ListOfPydanticModels(__root__=x).json())
+        )
