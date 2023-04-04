@@ -14,14 +14,10 @@ def optional_field(obj: Any, attribute_path: list[str], attribute_type: type[Att
     If the attribute is found, the type will be checked and TypeError will be raised if the type doesn't match the
     value.
     """
-    current_obj: Any = obj
-    for attr_name in attribute_path:
-        try:
-            current_obj = getattr(current_obj, attr_name)
-        except AttributeError:
-            return None
-    check_type(".".join(attribute_path), current_obj, attribute_type)
-    return current_obj
+    try:
+        return required_field(obj, attribute_path, attribute_type)
+    except (AttributeError, TypeError):
+        return None
 
 
 def required_field(obj: Any, attribute_path: list[str], attribute_type: type[AttrT]) -> AttrT:
@@ -31,7 +27,12 @@ def required_field(obj: Any, attribute_path: list[str], attribute_type: type[Att
     If the attribute is found, the type will be checked and TypeError will be raised if the type doesn't match the
     value.
     """
-    result = optional_field(obj, attribute_path, attribute_type)
-    if result is None:
-        raise AttributeError(f"{'.'.join(attribute_path)} is required but not provided")
-    return result
+    current_obj: Any = obj
+    for index, attr_name in enumerate(attribute_path):
+        try:
+            current_obj = getattr(current_obj, attr_name)
+        except AttributeError as error:
+            current_path = ".".join(attribute_path[0:index])
+            raise AttributeError(f"{current_path} does not exist") from error
+    check_type(".".join(attribute_path), current_obj, attribute_type)
+    return current_obj
