@@ -79,3 +79,6 @@ class Bo4eDataSet(BaseModel, ABC):
                     f"You probably forgot to call super().__init__() in the constructor of {self.__class__}"
                 ) from attribute_error
             raise
+
+    def __hash__(self):
+        return hash(self.get_id())
