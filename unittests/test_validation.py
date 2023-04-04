@@ -8,6 +8,7 @@ from pydantic import BaseModel, Required
 
 from bomf import ValidatorSet
 from bomf.model import Bo4eDataSet
+from bomf.validation import optional_field, required_field
 from bomf.validation.core import ValidationError, ValidatorParamInfos, ValidatorType, _ValidatorMapInternIndexType
 
 
@@ -56,6 +57,11 @@ async def check_xy_ending(x: str, y: int) -> None:
 async def check_required_and_optional(zx: str, zz: Optional[str] = None) -> None:
     assert zx == "Hello"
     assert zz is None
+
+
+async def check_required_and_optional_with_utility(z: Wrapper) -> None:
+    assert required_field(z, ["x"], str) == "Hello"
+    assert optional_field(z, ["z"], str) is None
 
 
 async def check_with_param_info(x: str, _param_infos: dict[str, ValidatorParamInfos], zz: str = "test"):
@@ -371,3 +377,9 @@ class TestValidation:
         # This ensures that the ID is constant across python sessions - as long as the line number of the raising
         # exception in `check_fail` doesn't change.
         assert sub_exceptions1[check_fail, frozendict({"x": "x"})].error_id == 47799448
+
+    async def test_utility_required_and_optional(self):
+        validator_set = ValidatorSet[DataSetTest]()
+        validator_set.register(check_required_and_optional_with_utility, {"z": "z"})
+        validation_summary = await validator_set.validate(dataset_instance)
+        assert validation_summary.num_errors_total == 0
