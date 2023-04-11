@@ -32,7 +32,7 @@ def required_field(obj: Any, attribute_path: list[str], attribute_type: type[Att
         try:
             current_obj = getattr(current_obj, attr_name)
         except AttributeError as error:
-            current_path = ".".join(attribute_path[0:index])
-            raise AttributeError(f"{current_path} does not exist") from error
+            current_path = ".".join(attribute_path[0 : index + 1])
+            raise AttributeError(f"'{current_path}' does not exist") from error
     check_type(".".join(attribute_path), current_obj, attribute_type)
     return current_obj
