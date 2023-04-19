@@ -20,7 +20,7 @@ pydantic==1.10.7
     #   bo4e
 pyhumps==3.8.0
     # via bo4e
-typeguard==2.13.3
+typeguard==3.0.2
     # via -r requirements.in
 typing-extensions==4.4.0
     # via pydantic
