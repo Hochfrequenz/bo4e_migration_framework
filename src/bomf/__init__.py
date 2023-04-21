@@ -47,7 +47,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         # todo: here we should add some logging and statistics stuff
         bo4e_datasets = self.source_data_set_to_bo4e_mapper.create_data_sets()
-        await self.validation.validate(*bo4e_datasets)
-        target_data_models = self.bo4e_to_target_mapper.create_target_models(bo4e_datasets)
+        validation_result = await self.validation.validate(*bo4e_datasets)
+        target_data_models = self.bo4e_to_target_mapper.create_target_models(validation_result.succeeded_data_sets)
         loading_summaries = await self.target_loader.load_entities(target_data_models)
         return loading_summaries
