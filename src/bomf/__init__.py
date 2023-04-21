@@ -10,7 +10,7 @@ from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
 from bomf.mapper import Bo4eDataSetToTargetMapper, IntermediateDataSet, SourceToBo4eDataSetMapper, TargetDataModel
 from bomf.provider import KeyTyp, SourceDataProvider
-from bomf.validation import ValidatorSet
+from bomf.validation import ValidationManager
 
 
 # pylint:disable=too-few-public-methods
@@ -24,7 +24,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     """
     A mapper that transforms source data models into data sets that consist of bo4e objects
     """
-    validation: ValidatorSet[IntermediateDataSet]
+    validation: ValidationManager[IntermediateDataSet]
     """
     a set of validation rules that are applied to the bo4e data sets
     """

@@ -6,4 +6,5 @@ from bomf.validation.core.types import (
     ValidatorFunction,
     ValidatorFunctionT,
 )
+from bomf.validation.core.utils import optional_field, required_field
 from bomf.validation.core.validator import Parameter, ParameterProvider, Parameters, PathParameterProvider, Validator
