@@ -25,13 +25,13 @@ def format_parameter_infos(
     """
     output = start_indent + "{"
     for param_name, param in validator.signature.parameters.items():
-        is_provided = param_name in provided_params
+        is_provided = param_name in provided_params and provided_params[param_name].provided
         is_required = (
             validator.signature.parameters[param_name].default == validator.signature.parameters[param_name].empty
         )
         param_description = (
             f"value='{provided_params[param_name].value if is_provided else param.default}', "
-            f"id='{provided_params[param_name].id if is_provided else 'unprovided'}', "
+            f"id='{provided_params[param_name].id if param_name in provided_params else 'unprovided'}', "
             f"{'required' if is_required else 'optional'}, "
             f"{'provided' if is_provided else 'unprovided'}"
         )
@@ -181,7 +181,7 @@ class ErrorHandler(Generic[DataSetT]):
         validator_index: ValidatorIndex,
         validation_manager: "ValidationManager[DataSetT]",
         custom_error_id: Optional[int] = None,
-    ) -> AsyncGenerator[None, None, None]:
+    ) -> AsyncGenerator[None, None]:
         try:
             yield None
         except Exception as error:

@@ -73,21 +73,27 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
 
 
 class Parameter(Generic[DataSetT]):
-    def __init__(self, provider: "ParameterProvider[DataSetT]", name: str, value: Any, param_id: str):
+    def __init__(self, provider: "ParameterProvider[DataSetT]", name: str, value: Any, param_id: str, provided: bool):
         self.provider = provider
         self.name = name
         self.value = value
         self.id = param_id
+        self.provided = provided
 
 
 class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        provider = set(param.provider for param in self)
-        if len(provider) != 1:
+        provider_set = set(param.provider for param in self.values())
+        if len(provider_set) != 1:
             raise ValueError("You cannot add parameters with different providers")
-        self.provider: "ParameterProvider[DataSetT]" = provider.pop()
-        self.param_dict: dict[str, Any] = {param.name: param.value for param in self.values()}
+        provider: "ParameterProvider[DataSetT]" = provider_set.pop()
+        param_dict: dict[str, Any] = {param.name: param.value for param in self.values() if param.provided}
+
+        self.provider: "ParameterProvider[DataSetT]"
+        self.param_dict: dict[str, Any]
+        dict.__setattr__(self, "provider", provider)
+        dict.__setattr__(self, "param_dict", param_dict)
 
 
 class ParameterProvider(ABC, Generic[DataSetT]):
@@ -123,28 +129,24 @@ class PathParameterProvider(ParameterProvider[DataSetT]):
             parameter_values: dict[str, Parameter] = {}
             skip = False
             for param_name, attr_path in param_map.items():
-                if param_name in self.validator.required_param_names:
-                    try:
-                        parameter_values[param_name] = Parameter(
-                            provider=self,
-                            name=param_name,
-                            id=attr_path,
-                            value=required_field(
-                                data_set, attr_path, self.validator.signature.parameters[param_name].annotation
-                            ),
-                        )
-                    except (AttributeError, TypeError) as error:
+                try:
+                    value = required_field(
+                        data_set, attr_path, self.validator.signature.parameters[param_name].annotation
+                    )
+                    provided = True
+                except (AttributeError, TypeError) as error:
+                    if param_name in self.validator.required_param_names:
                         yield error
                         skip = True
                         break
-                else:
-                    parameter_values[param_name] = Parameter(
-                        provider=self,
-                        name=param_name,
-                        id=attr_path,
-                        value=optional_field(
-                            data_set, attr_path, self.validator.signature.parameters[param_name].annotation
-                        ),
-                    )
+                    value = self.validator.signature.parameters[param_name].default
+                    provided = False
+                parameter_values[param_name] = Parameter(
+                    provider=self,
+                    name=param_name,
+                    param_id=attr_path,
+                    value=value,
+                    provided=provided,
+                )
             if not skip:
                 yield Parameters(**parameter_values)

@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from collections import defaultdict
 from dataclasses import Field, dataclass
 from datetime import timedelta
@@ -17,7 +18,7 @@ from bomf.validation.core2.types import (
     ValidatorIndex,
     validation_logger,
 )
-from bomf.validation.core2.validator import ParameterProvider, Parameters, Validator
+from bomf.validation.core2.validator import Parameter, ParameterProvider, Parameters, Validator
 
 
 class _ExecutionState(StrEnum):
@@ -125,7 +126,7 @@ class ValidationManager(Generic[DataSetT]):
         self,
         validator: ValidatorGeneric,
         param_provider: ParameterProvider[DataSetT],
-        depends_on: Optional[set[ValidatorGeneric | tuple[ValidatorGeneric, ParameterProvider[DataSetT]]]],
+        depends_on: Optional[set["ValidatorGeneric | tuple[ValidatorGeneric, ParameterProvider[DataSetT]]"]],
     ) -> tuple[set[ValidatorIndex], list[tuple[ValidatorIndex, ValidatorIndex]]]:
         if depends_on is None:
             depends_on = set()
@@ -154,7 +155,7 @@ class ValidationManager(Generic[DataSetT]):
         self,
         validator: ValidatorGeneric,
         param_provider: ParameterProvider[DataSetT],
-        depends_on: Optional[set[ValidatorGeneric | ValidatorIndex]] = None,
+        depends_on: Optional[set["ValidatorGeneric | ValidatorIndex"]] = None,
         timeout: Optional[timedelta] = None,
     ):
         real_dependencies, dependency_graph_edges = self._dependency_graph_edges(validator, param_provider, depends_on)
@@ -222,7 +223,7 @@ class ValidationManager(Generic[DataSetT]):
                     str(params_or_exc), params_or_exc, validator_index, self, custom_error_id=1
                 )
                 continue
-            self.info.running_tasks[None].current_provided_params = params_or_exc
+            self.info.current_provided_params = params_or_exc
 
             async with self.info.error_handler.pokemon_catcher(validator_index, self):
                 if execution_info.timeout is not None:
@@ -279,6 +280,25 @@ class ValidationManager(Generic[DataSetT]):
             else:
                 await self._execute_validators(validator_execution_order)
 
-    # @classmethod
-    # def path(cls, param: str) -> str:
-    #     asyncio.current_task()
+    @classmethod
+    def param(cls, param: str) -> Parameter:
+        call_stack = inspect.stack()
+        # call_stack[0] -> this function
+        # call_stack[1] -> must be the validator function
+        # call_stack[2] -> should be either `_execute_sync_validator` or `_execute_async_validator`
+        try:
+            validation_manager: ValidationManager = call_stack[2].frame.f_locals["self"]
+        except KeyError:
+            raise RuntimeError(
+                "You can call this function only directly from inside a function"
+                "which is executed by the validation framework"
+            )
+
+        provided_params: Parameters = validation_manager.info.current_provided_params
+        assert provided_params is not None, "This shouldn't happen"
+        if param not in provided_params:
+            raise RuntimeError(
+                f"Parameter provider {validation_manager.info.current_param_provider} "
+                f"did not provide parameter information for parameter '{param}'"
+            )
+        return provided_params[param] if param in provided_params else None
