@@ -279,26 +279,3 @@ class ValidationManager(Generic[DataSetT]):
                     await self._execute_validators(validator_execution_order, task_group=task_group)
             else:
                 await self._execute_validators(validator_execution_order)
-
-    @classmethod
-    def param(cls, param: str) -> Parameter:
-        call_stack = inspect.stack()
-        # call_stack[0] -> this function
-        # call_stack[1] -> must be the validator function
-        # call_stack[2] -> should be either `_execute_sync_validator` or `_execute_async_validator`
-        try:
-            validation_manager: ValidationManager = call_stack[2].frame.f_locals["self"]
-        except KeyError:
-            raise RuntimeError(
-                "You can call this function only directly from inside a function"
-                "which is executed by the validation framework"
-            )
-
-        provided_params: Parameters = validation_manager.info.current_provided_params
-        assert provided_params is not None, "This shouldn't happen"
-        if param not in provided_params:
-            raise RuntimeError(
-                f"Parameter provider {validation_manager.info.current_param_provider} "
-                f"did not provide parameter information for parameter '{param}'"
-            )
-        return provided_params[param] if param in provided_params else None
