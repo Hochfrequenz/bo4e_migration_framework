@@ -8,6 +8,7 @@ from typing import Any, Generic, Iterator, Optional
 
 import networkx as nx
 
+from bomf.validation.core2.analysis import ValidationResult
 from bomf.validation.core2.errors import ErrorHandler
 from bomf.validation.core2.types import (
     AsyncValidatorFunction,
@@ -260,7 +261,8 @@ class ValidationManager(Generic[DataSetT]):
             else:
                 await self._execute_sync_validator(validator_index)
 
-    async def validate(self, *data_sets: DataSetT) -> None:
+    async def validate(self, *data_sets: DataSetT) -> ValidationResult:
+        error_handlers: dict[DataSetT, ErrorHandler[DataSetT]] = {}
         for data_set in data_sets:
             self._runtime_execution_info = _RuntimeExecutionInfo(
                 data_set=data_set,
@@ -271,6 +273,7 @@ class ValidationManager(Generic[DataSetT]):
                     lambda: _RuntimeTaskInfo(current_validator_index=None, current_provided_params=None)
                 ),
             )
+            error_handlers[data_set] = self.info.error_handler
             validator_execution_order: Iterator[ValidatorIndex] = reversed(
                 list(nx.topological_sort(self.dependency_graph))
             )
@@ -279,3 +282,5 @@ class ValidationManager(Generic[DataSetT]):
                     await self._execute_validators(validator_execution_order, task_group=task_group)
             else:
                 await self._execute_validators(validator_execution_order)
+
+        return ValidationResult(self, error_handlers)
