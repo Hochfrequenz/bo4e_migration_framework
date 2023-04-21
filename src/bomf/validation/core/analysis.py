@@ -15,7 +15,7 @@ def _extract_error_id(validation_error: ValidationError) -> _IDType:
 class ValidationResult:
     def __init__(
         self,
-        validation_manager: ValidationManager[DataSetT],
+        validation_manager: "ValidationManager[DataSetT]",
         error_handlers: dict[DataSetT, ErrorHandler[DataSetT]],
     ):
         self._error_handlers = error_handlers
