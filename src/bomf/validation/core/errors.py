@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Generic, Optional, TypeAl
 
 from bidict import bidict
 
-from bomf.validation.core2.types import DataSetT, ValidatorGeneric, ValidatorIndex, validation_logger
-from bomf.validation.core2.validator import Parameters, Validator
+from bomf.validation.core.types import DataSetT, ValidatorGeneric, ValidatorIndex, validation_logger
+from bomf.validation.core.validator import Parameters, Validator
 
 if TYPE_CHECKING:
-    from bomf.validation.core2.execution import ValidationManager
+    from bomf.validation.core.execution import ValidationManager
 
 
 def format_parameter_infos(

@@ -6,14 +6,14 @@ from typing import Any, Generator, Generic, TypeGuard, Union
 
 from frozendict import frozendict
 
-from bomf.validation.core2.types import (
+from bomf.validation.core.types import (
     AsyncValidatorFunction,
     DataSetT,
     SyncValidatorFunction,
     ValidatorFunctionT,
     validation_logger,
 )
-from bomf.validation.core2.utils import optional_field, required_field
+from bomf.validation.core.utils import optional_field, required_field
 
 
 class Validator(Generic[DataSetT, ValidatorFunctionT]):

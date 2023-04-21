@@ -1,11 +1,11 @@
 import itertools
 from typing import TYPE_CHECKING, Optional
 
-from bomf.validation.core2.errors import ErrorHandler, ValidationError, _IDType
-from bomf.validation.core2.types import DataSetT
+from bomf.validation.core.errors import ErrorHandler, ValidationError, _IDType
+from bomf.validation.core.types import DataSetT
 
 if TYPE_CHECKING:
-    from bomf.validation.core2 import ValidationManager
+    from bomf.validation.core import ValidationManager
 
 
 def _extract_error_id(validation_error: ValidationError) -> _IDType:

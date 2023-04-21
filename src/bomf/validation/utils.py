@@ -6,7 +6,7 @@ from typing import Any, Optional, TypeVar
 
 from typeguard import check_type
 
-from bomf.validation.core2 import Parameter, Parameters, ValidationManager
+from bomf.validation.core import Parameter, Parameters, ValidationManager
 
 AttrT = TypeVar("AttrT")
 

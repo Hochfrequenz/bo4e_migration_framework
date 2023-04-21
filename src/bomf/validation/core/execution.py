@@ -8,9 +8,9 @@ from typing import Any, Generic, Iterator, Optional
 
 import networkx as nx
 
-from bomf.validation.core2.analysis import ValidationResult
-from bomf.validation.core2.errors import ErrorHandler
-from bomf.validation.core2.types import (
+from bomf.validation.core.analysis import ValidationResult
+from bomf.validation.core.errors import ErrorHandler
+from bomf.validation.core.types import (
     AsyncValidatorFunction,
     DataSetT,
     SyncValidatorFunction,
@@ -19,7 +19,7 @@ from bomf.validation.core2.types import (
     ValidatorIndex,
     validation_logger,
 )
-from bomf.validation.core2.validator import Parameter, ParameterProvider, Parameters, Validator
+from bomf.validation.core.validator import Parameter, ParameterProvider, Parameters, Validator
 
 
 class _ExecutionState(StrEnum):
