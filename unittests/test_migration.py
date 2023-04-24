@@ -55,7 +55,7 @@ class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
         # what_ever_you_like is a place holde for all the relation magic that may happen
         self._source_models = what_ever_you_like
 
-    def create_data_sets(self) -> List[_MyIntermediateDataModel]:
+    async def create_data_sets(self) -> List[_MyIntermediateDataModel]:
         return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 
@@ -69,7 +69,7 @@ _my_validation.register(_my_rule, {"data": "data"})
 
 
 class _MyToTargetMapper(Bo4eDataSetToTargetMapper[_MyTargetDataModel, _MyIntermediateDataModel]):
-    def create_target_model(self, dataset: _MyIntermediateDataModel) -> _MyTargetDataModel:
+    async def create_target_model(self, dataset: _MyIntermediateDataModel) -> _MyTargetDataModel:
         my_dict = dataset.data
         for my_key, my_value in my_dict.items():
             return [my_key, my_value]

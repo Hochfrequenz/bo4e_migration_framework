@@ -1,6 +1,7 @@
 """
 mappers convert from source data model to BO4E and from BO4E to a target data model
 """
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Generic, List, TypeVar
 
@@ -28,7 +29,7 @@ class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     # the only thing it has to provide is a method to create_data_sets (in bo4e).
     # we don't care from where it gets them in the first place
 
-    def create_data_sets(self) -> List[IntermediateDataSet]:
+    async def create_data_sets(self) -> List[IntermediateDataSet]:
         """
         apply the mapping to all the provided source data sets.
 
@@ -43,14 +44,15 @@ class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSe
     """
 
     @abstractmethod
-    def create_target_model(self, dataset: IntermediateDataSet) -> TargetDataModel:
+    async def create_target_model(self, dataset: IntermediateDataSet) -> TargetDataModel:
         """
         maps the given source data model into an intermediate data set
         """
 
-    def create_target_models(self, datasets: List[IntermediateDataSet]) -> List[TargetDataModel]:
+    async def create_target_models(self, datasets: List[IntermediateDataSet]) -> List[TargetDataModel]:
         """
         apply the mapping to all the provided dataset
         """
         # here we could use some error handling in the future
-        return [self.create_target_model(dataset=dataset) for dataset in datasets]
+        tasks = [self.create_target_model(dataset=dataset) for dataset in datasets]
+        return await asyncio.gather(*tasks)

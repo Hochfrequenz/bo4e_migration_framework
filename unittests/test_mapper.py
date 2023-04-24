@@ -38,7 +38,7 @@ class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
 
 
 class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
-    def create_data_sets(self) -> List[_MaLoAndMeLo]:
+    async def create_data_sets(self) -> List[_MaLoAndMeLo]:
         return [
             _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id=source["meloId"]),
@@ -49,7 +49,7 @@ class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
 
 
 class _MaLoMeLoToListMapper(Bo4eDataSetToTargetMapper):
-    def create_target_model(self, dataset: _MaLoAndMeLo) -> List[str]:
+    async def create_target_model(self, dataset: _MaLoAndMeLo) -> List[str]:
         return [
             dataset.get_business_object(Marktlokation).marktlokations_id,
             dataset.get_business_object(Messlokation).messlokations_id,
@@ -57,9 +57,9 @@ class _MaLoMeLoToListMapper(Bo4eDataSetToTargetMapper):
 
 
 class TestMapper:
-    def test_source_to_intermediate_mapper_batch(self):
+    async def test_source_to_intermediate_mapper_batch(self):
         mapper = _DictToMaLoMeLoMapper()
-        actual = mapper.create_data_sets()
+        actual = await mapper.create_data_sets()
         assert actual == [
             _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id="DE000111222333"),
@@ -67,12 +67,12 @@ class TestMapper:
             )
         ]
 
-    def test_intermediate_to_target_mapper(self):
+    async def test_intermediate_to_target_mapper(self):
         """
         tests the single data set mapping
         """
         mapper = _MaLoMeLoToListMapper()
-        actual = mapper.create_target_model(
+        actual = await mapper.create_target_model(
             _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id="DE000111222333"),
                 malo=Marktlokation.construct(marktlokations_id="54321012345"),
@@ -80,12 +80,12 @@ class TestMapper:
         )
         assert actual == ["54321012345", "DE000111222333"]
 
-    def test_intermediate_to_target_mapper_batch(self):
+    async def test_intermediate_to_target_mapper_batch(self):
         """
         test the batch mapping
         """
         mapper = _MaLoMeLoToListMapper()
-        actual = mapper.create_target_models(
+        actual = await mapper.create_target_models(
             [
                 _MaLoAndMeLo(
                     melo=Messlokation.construct(messlokations_id="DE000111222333"),
