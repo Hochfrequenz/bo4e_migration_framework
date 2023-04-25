@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import types
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Generic, Iterator, Optional, TypeGuard, Union
+from typing import Any, Generator, Generic, TypeGuard, Union
 
 from frozendict import frozendict
 

@@ -2,9 +2,6 @@
 Contains some useful utility functions to be used in validator functions.
 """
 import inspect
-from typing import Any, Optional, TypeVar
-
-from typeguard import check_type
 
 from bomf.validation.core import Parameter, Parameters, ValidationManager
 

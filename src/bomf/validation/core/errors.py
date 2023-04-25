@@ -3,12 +3,12 @@ import hashlib
 import random
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Generic, Optional, TypeAlias
+from typing import TYPE_CHECKING, AsyncGenerator, Generic, Optional, TypeAlias
 
 from bidict import bidict
 
 from bomf.validation.core.types import DataSetT, MappedValidatorT, ValidatorT, validation_logger
-from bomf.validation.core.validator import Parameters, Validator
+from bomf.validation.core.validator import Parameters
 
 if TYPE_CHECKING:
     from bomf.validation.core.execution import ValidationManager
