@@ -26,7 +26,7 @@ def param(param: str) -> "Parameter":
     assert provided_params is not None, "This shouldn't happen"
     if param not in provided_params:
         raise RuntimeError(
-            f"Parameter provider {validation_manager.info.current_param_provider} "
+            f"Parameter provider {validation_manager.info.current_mapped_validator} "
             f"did not provide parameter information for parameter '{param}'"
         )
     return provided_params[param] if param in provided_params else None

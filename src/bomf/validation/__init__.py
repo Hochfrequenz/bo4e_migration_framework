@@ -3,8 +3,8 @@ bomf performs validation on the intermediate bo4e data set layer. The main class
 """
 
 from bomf.validation.core import (
-    ParameterProvider,
-    PathParameterProvider,
+    MappedValidator,
+    PathMappedValidator,
     ValidationError,
     ValidationManager,
     Validator,

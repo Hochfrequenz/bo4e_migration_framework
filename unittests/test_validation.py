@@ -8,9 +8,9 @@ from pydantic import BaseModel, Required
 
 from bomf import ValidationManager
 from bomf.model import Bo4eDataSet
-from bomf.validation import PathParameterProvider, Validator, optional_field, param, required_field
+from bomf.validation import PathMappedValidator, Validator, optional_field, param, required_field
 from bomf.validation.core import ValidationError, ValidatorFunctionT
-from bomf.validation.core.types import ValidatorIndex
+from bomf.validation.core.types import MappedValidatorT
 
 
 class Wrapper(BaseModel):
@@ -144,12 +144,8 @@ class TestValidation:
         global finishing_order
         finishing_order = []
         validation_manager = ValidationManager[DataSetTest]()
-        validation_manager.register(
-            validator_check_x_expensive, PathParameterProvider(validator_check_x_expensive, {"x": "x"})
-        )
-        validation_manager.register(
-            validator_check_y_positive, PathParameterProvider(validator_check_y_positive, {"y": "y"})
-        )
+        validation_manager.register(PathMappedValidator(validator_check_x_expensive, {"x": "x"}))
+        validation_manager.register(PathMappedValidator(validator_check_y_positive, {"y": "y"}))
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
         assert finishing_order == [check_y_positive, check_x_expensive]
@@ -163,30 +159,19 @@ class TestValidation:
         global finishing_order
         finishing_order = []
         validation_manager = ValidationManager[DataSetTest]()
+        validation_manager.register(PathMappedValidator(validator_check_x_expensive, {"x": "x"}))
         validation_manager.register(
-            validator_check_x_expensive, PathParameterProvider(validator_check_x_expensive, {"x": "x"})
+            PathMappedValidator(validator_check_multiple_registration, {"x": "x"}),
         )
         validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "x"}),
+            PathMappedValidator(validator_check_multiple_registration, {"x": "z.x"}),
         )
         validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "z.x"}),
-        )
-        validation_manager.register(
-            validator_check_xy_ending,
-            PathParameterProvider(validator_check_xy_ending, {"x": "x", "y": "y"}),
+            PathMappedValidator(validator_check_xy_ending, {"x": "x", "y": "y"}),
             depends_on={
-                validator_check_x_expensive,
-                (
-                    validator_check_multiple_registration,
-                    PathParameterProvider(validator_check_multiple_registration, {"x": "x"}),
-                ),
-                (
-                    validator_check_multiple_registration,
-                    PathParameterProvider(validator_check_multiple_registration, frozendict({"x": "z.x"})),
-                ),
+                PathMappedValidator(validator_check_x_expensive, {"x": "x"}),
+                PathMappedValidator(validator_check_multiple_registration, {"x": "x"}),
+                PathMappedValidator(validator_check_multiple_registration, {"x": "z.x"}),
             },
         )
         validation_summary = await validation_manager.validate(dataset_instance)
@@ -205,16 +190,14 @@ class TestValidation:
         global finishing_order
         finishing_order = []
         validation_manager = ValidationManager[DataSetTest]()
+        validation_manager.register(PathMappedValidator(validator_check_x_expensive, {"x": "x"}))
+        validation_manager.register(PathMappedValidator(validator_check_y_positive, {"y": "y"}))
         validation_manager.register(
-            validator_check_x_expensive, PathParameterProvider(validator_check_x_expensive, {"x": "x"})
-        )
-        validation_manager.register(
-            validator_check_y_positive, PathParameterProvider(validator_check_y_positive, {"y": "y"})
-        )
-        validation_manager.register(
-            validator_check_xy_ending,
-            PathParameterProvider(validator_check_xy_ending, {"x": "x", "y": "y"}),
-            depends_on={validator_check_x_expensive, validator_check_y_positive},
+            PathMappedValidator(validator_check_xy_ending, {"x": "x", "y": "y"}),
+            depends_on={
+                PathMappedValidator(validator_check_x_expensive, {"x": "x"}),
+                PathMappedValidator(validator_check_y_positive, {"y": "y"}),
+            },
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
@@ -227,15 +210,12 @@ class TestValidation:
         global finishing_order
         finishing_order = []
         validation_manager = ValidationManager[DataSetTest]()
+        validation_manager.register(PathMappedValidator(validator_check_y_positive, {"y": "y"}))
+        validation_manager.register(PathMappedValidator(validator_check_fail, {"x": "x"}))
+        validation_manager.register(PathMappedValidator(validator_check_fail2, {"y": "y"}))
         validation_manager.register(
-            validator_check_y_positive, PathParameterProvider(validator_check_y_positive, {"y": "y"})
-        )
-        validation_manager.register(validator_check_fail, PathParameterProvider(validator_check_fail, {"x": "x"}))
-        validation_manager.register(validator_check_fail2, PathParameterProvider(validator_check_fail2, {"y": "y"}))
-        validation_manager.register(
-            validator_check_fail3,
-            PathParameterProvider(validator_check_fail3, {"y": "y"}),
-            depends_on={validator_check_fail},
+            PathMappedValidator(validator_check_fail3, {"y": "y"}),
+            depends_on={PathMappedValidator(validator_check_fail, {"x": "x"})},
         )
         validation_summary = await validation_manager.validate(dataset_instance)
 
@@ -273,8 +253,7 @@ class TestValidation:
     ):
         validation_manager = ValidationManager[DataSetTest]()
         with pytest.raises(ValueError) as error:
-            validator = Validator(validator_func)
-            validation_manager.register(validator, PathParameterProvider(validator, param_map))
+            validation_manager.register(PathMappedValidator(Validator(validator_func), param_map))
 
         assert str(error.value) == expected_error
 
@@ -282,31 +261,10 @@ class TestValidation:
         validation_manager = ValidationManager[DataSetTest]()
         with pytest.raises(ValueError) as exc:
             validation_manager.register(
-                validator_check_fail,
-                PathParameterProvider(validator_check_fail, {"x": "x"}),
-                depends_on={validator_check_multiple_registration},
+                PathMappedValidator(validator_check_fail, {"x": "x"}),
+                depends_on={PathMappedValidator(validator_check_multiple_registration, {"x": "x"})},
             )
         assert "The specified dependency is not registered: check_multiple_registration" == str(exc.value)
-
-        validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "x"}),
-        )
-        validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "z.x"}),
-        )
-
-        with pytest.raises(ValueError) as exc:
-            validation_manager.register(
-                validator_check_fail,
-                PathParameterProvider(validator_check_fail, {"x": "x"}),
-                depends_on={validator_check_multiple_registration},
-            )
-        assert (
-            "The dependency check_multiple_registration got registered multiple times. You have "
-            "to define the parameter provider for the dependency to resolve the ambiguity." == str(exc.value)
-        )
 
     @pytest.mark.parametrize(
         ["validator", "param_map", "expected_error"],
@@ -323,7 +281,7 @@ class TestValidation:
         self, validator: Validator[DataSetTest, ValidatorFunctionT], param_map: dict[str, str], expected_error: str
     ):
         validation_manager = ValidationManager[DataSetTest]()
-        validation_manager.register(validator, PathParameterProvider(validator, param_map))
+        validation_manager.register(PathMappedValidator(validator, param_map))
         validation_summary = await validation_manager.validate(dataset_instance)
 
         assert validation_summary.num_errors_total == 1
@@ -332,8 +290,7 @@ class TestValidation:
     async def test_timeout(self):
         validation_manager = ValidationManager[DataSetTest]()
         validation_manager.register(
-            validator_check_x_expensive,
-            PathParameterProvider(validator_check_x_expensive, {"x": "x"}),
+            PathMappedValidator(validator_check_x_expensive, {"x": "x"}),
             timeout=timedelta(milliseconds=100),
         )
         validation_summary = await validation_manager.validate(dataset_instance)
@@ -344,9 +301,7 @@ class TestValidation:
 
     async def test_unprovided_but_required(self):
         validation_manager = ValidationManager[DataSetTest]()
-        validation_manager.register(
-            validator_unprovided_but_required, PathParameterProvider(validator_unprovided_but_required, {"zz": "z.z"})
-        )
+        validation_manager.register(PathMappedValidator(validator_unprovided_but_required, {"zz": "z.z"}))
         validation_summary = await validation_manager.validate(dataset_instance)
 
         assert validation_summary.num_errors_total == 1
@@ -357,12 +312,10 @@ class TestValidation:
         finishing_order = []
         validation_manager = ValidationManager[DataSetTest]()
         validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "x"}),
+            PathMappedValidator(validator_check_multiple_registration, {"x": "x"}),
         )
         validation_manager.register(
-            validator_check_multiple_registration,
-            PathParameterProvider(validator_check_multiple_registration, {"x": "z.x"}),
+            PathMappedValidator(validator_check_multiple_registration, {"x": "z.x"}),
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
@@ -371,8 +324,7 @@ class TestValidation:
     async def test_required_and_optional(self):
         validation_manager = ValidationManager[DataSetTest]()
         validation_manager.register(
-            validator_check_required_and_optional,
-            PathParameterProvider(validator_check_required_and_optional, {"zx": "z.x", "zz": "z.z"}),
+            PathMappedValidator(validator_check_required_and_optional, {"zx": "z.x", "zz": "z.z"}),
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
@@ -380,36 +332,30 @@ class TestValidation:
     async def test_param_info(self):
         validation_manager = ValidationManager[DataSetTest]()
         validation_manager.register(
-            validator_check_with_param_info,
-            PathParameterProvider(validator_check_with_param_info, {"x": "x", "zz": "z.z"}),
+            PathMappedValidator(validator_check_with_param_info, {"x": "x", "zz": "z.z"}),
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
 
     async def test_error_ids(self):
         validation_manager = ValidationManager[DataSetTest]()
-        validation_manager.register(validator_check_fail, PathParameterProvider(validator_check_fail, {"x": "x"}))
-        validation_manager.register(validator_check_fail2, PathParameterProvider(validator_check_fail2, {"y": "y"}))
+        validation_manager.register(PathMappedValidator(validator_check_fail, {"x": "x"}))
+        validation_manager.register(PathMappedValidator(validator_check_fail2, {"y": "y"}))
         validation_manager.register(
-            validator_check_fail3,
-            PathParameterProvider(validator_check_fail3, {"y": "y"}),
-            depends_on={validator_check_fail},
+            PathMappedValidator(validator_check_fail3, {"y": "y"}),
+            depends_on={PathMappedValidator(validator_check_fail, {"x": "x"})},
         )
-        validation_manager.register(
-            validator_check_different_fails, PathParameterProvider(validator_check_different_fails, {"x": "x"})
-        )
-        validation_manager.register(
-            validator_check_different_fails, PathParameterProvider(validator_check_different_fails, {"x": "z.x"})
-        )
+        validation_manager.register(PathMappedValidator(validator_check_different_fails, {"x": "x"}))
+        validation_manager.register(PathMappedValidator(validator_check_different_fails, {"x": "z.x"}))
         validation_summary = await validation_manager.validate(dataset_instance)
         validation_summary2 = await validation_manager.validate(dataset_instance)
         # This is just to ensure that the ID generation for the errors is not completely random and has consistency
 
-        sub_exceptions1: dict[ValidatorIndex, ValidationError] = {
-            exception.validator_index: exception for exception in validation_summary.all_errors
+        sub_exceptions1: dict[MappedValidatorT, ValidationError] = {
+            exception.mapped_validator: exception for exception in validation_summary.all_errors
         }
-        sub_exceptions2: dict[ValidatorIndex, ValidationError] = {
-            exception.validator_index: exception for exception in validation_summary2.all_errors
+        sub_exceptions2: dict[MappedValidatorT, ValidationError] = {
+            exception.mapped_validator: exception for exception in validation_summary2.all_errors
         }
         assert len(sub_exceptions1) == 5
         # This is a self-consistency check to ensure that there is no unwanted randomness in the program.
@@ -418,25 +364,17 @@ class TestValidation:
         }
         # Different errors in the same function should get different error IDs.
         assert (
-            sub_exceptions1[
-                validator_check_different_fails, PathParameterProvider(validator_check_different_fails, {"x": "x"})
-            ].error_id
-            != sub_exceptions1[
-                validator_check_different_fails, PathParameterProvider(validator_check_different_fails, {"x": "z.x"})
-            ].error_id
+            sub_exceptions1[PathMappedValidator(validator_check_different_fails, {"x": "x"})].error_id
+            != sub_exceptions1[PathMappedValidator(validator_check_different_fails, {"x": "z.x"})].error_id
         )
         # This ensures that the ID is constant across python sessions - as long as the line number of the raising
         # exception in `check_fail` doesn't change.
-        assert (
-            sub_exceptions1[validator_check_fail, PathParameterProvider(validator_check_fail, {"x": "x"})].error_id
-            == 47799448
-        )
+        assert sub_exceptions1[PathMappedValidator(validator_check_fail, {"x": "x"})].error_id == 47799448
 
     async def test_utility_required_and_optional(self):
         validation_manager = ValidationManager[DataSetTest]()
         validation_manager.register(
-            validator_check_required_and_optional_with_utility,
-            PathParameterProvider(validator_check_required_and_optional_with_utility, {"z": "z"}),
+            PathMappedValidator(validator_check_required_and_optional_with_utility, {"z": "z"}),
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0

@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import types
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Generic, TypeGuard, Union
+from typing import Any, Generator, Generic, Iterator, Optional, TypeGuard, Union
 
 from frozendict import frozendict
 
@@ -13,7 +13,7 @@ from bomf.validation.core.types import (
     ValidatorFunctionT,
     validation_logger,
 )
-from bomf.validation.core.utils import optional_field, required_field
+from bomf.validation.core.utils import required_field
 
 
 class Validator(Generic[DataSetT, ValidatorFunctionT]):
@@ -76,7 +76,7 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
 
 
 class Parameter(Generic[DataSetT]):
-    def __init__(self, provider: "ParameterProvider[DataSetT]", name: str, value: Any, param_id: str, provided: bool):
+    def __init__(self, provider: "MappedValidator[DataSetT]", name: str, value: Any, param_id: str, provided: bool):
         self.provider = provider
         self.name = name
         self.value = value
@@ -93,18 +93,19 @@ class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
         provider_set = set(param.provider for param in self.values())
         if len(provider_set) != 1:
             raise ValueError("You cannot add parameters with different providers")
-        provider: "ParameterProvider[DataSetT]" = provider_set.pop()
+        provider: "MappedValidator[DataSetT]" = provider_set.pop()
         param_dict: dict[str, Any] = {param.name: param.value for param in self.values() if param.provided}
 
-        self.provider: "ParameterProvider[DataSetT]"
+        self.provider: "MappedValidator[DataSetT]"
         self.param_dict: dict[str, Any]
         dict.__setattr__(self, "provider", provider)
         dict.__setattr__(self, "param_dict", param_dict)
 
 
-class ParameterProvider(ABC, Generic[DataSetT]):
+class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
     def __init__(self, validator: Validator[DataSetT, ValidatorFunctionT]):
         self.validator = validator
+        self.name = validator.name
         validation_logger.debug("Created ParameterProvider: %s, %s", self.__class__.__name__, self.validator.name)
 
     @abstractmethod
@@ -112,10 +113,22 @@ class ParameterProvider(ABC, Generic[DataSetT]):
         ...
 
     def __repr__(self) -> str:
-        return f"ParameterProvider({self.validator.name})"
+        return f"MappedValidator({self.name})"
+
+    @property
+    def is_async(
+        self: "MappedValidator[DataSetT, ValidatorFunctionT]",
+    ) -> TypeGuard["MappedValidator[DataSetT, AsyncValidatorFunction]"]:
+        return self.validator._is_async
+
+    @property
+    def is_sync(
+        self: "MappedValidator[DataSetT, ValidatorFunctionT]",
+    ) -> TypeGuard["MappedValidator[DataSetT, SyncValidatorFunction]"]:
+        return not self.validator._is_async
 
 
-class PathParameterProvider(ParameterProvider[DataSetT]):
+class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
     def __init__(
         self, validator: Validator[DataSetT, ValidatorFunctionT], *param_maps: dict[str, str] | frozendict[str, str]
     ):
@@ -137,19 +150,25 @@ class PathParameterProvider(ParameterProvider[DataSetT]):
                     f"{self.validator.name} misses parameter(s) {self.validator.required_param_names - mapped_params}"
                 )
 
-    def __eq__(self, other: "PathParameterProvider[DataSetT]") -> bool:
-        return isinstance(other, PathParameterProvider) and self.param_maps == other.param_maps
+    def __eq__(self, other: "PathMappedValidator[DataSetT]") -> bool:
+        return (
+            isinstance(other, PathMappedValidator)
+            and self.validator == other.validator
+            and self.param_maps == other.param_maps
+        )
 
-    def __ne__(self, other: "PathParameterProvider[DataSetT]") -> bool:
-        return not isinstance(other, PathParameterProvider) or self.param_maps != other.param_maps
+    def __ne__(self, other: "PathMappedValidator[DataSetT]") -> bool:
+        return (
+            not isinstance(other, PathMappedValidator)
+            or self.validator != other.validator
+            or self.param_maps != other.param_maps
+        )
 
     def __hash__(self) -> int:
-        return hash(self.param_maps)
+        return hash(self.param_maps) + hash(self.validator)
 
     def __repr__(self) -> str:
-        return (
-            f"PathParameterProvider({self.validator.name}, {tuple(dict(param_map) for param_map in self.param_maps)})"
-        )
+        return f"PathMappedValidator({self.validator.name}, {tuple(dict(param_map) for param_map in self.param_maps)})"
 
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
         for param_map in self.param_maps:

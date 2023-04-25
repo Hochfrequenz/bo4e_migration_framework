@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Generic, Optional, TypeAl
 
 from bidict import bidict
 
-from bomf.validation.core.types import DataSetT, ValidatorGeneric, ValidatorIndex, validation_logger
+from bomf.validation.core.types import DataSetT, MappedValidatorT, ValidatorT, validation_logger
 from bomf.validation.core.validator import Parameters, Validator
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def format_parameter_infos(
-    validator: ValidatorGeneric,
+    validator: ValidatorT,
     provided_params: Parameters,
     start_indent: str = "",
     indent_step_size: str = "\t",
@@ -105,22 +105,22 @@ class ValidationError(RuntimeError):
         message_detail: str,
         cause: Exception,
         data_set: DataSetT,
-        validator_index: ValidatorIndex,
+        mapped_validator: MappedValidatorT,
         validation_manager: "ValidationManager[DataSetT]",
         error_id: _IDType,
     ):
         provided_params = validation_manager.info.running_tasks[
-            validation_manager.info.tasks[validator_index]
+            validation_manager.info.tasks[mapped_validator]
         ].current_provided_params
         message = (
             f"{error_id}: {message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
             f"\tError ID: {error_id}\n"
-            f"\tValidator function: {validator_index[0].name}"
+            f"\tValidator function: {mapped_validator.name}"
         )
         if provided_params is not None:
             formatted_param_infos = format_parameter_infos(
-                validator_index[0],
+                mapped_validator.validator,
                 provided_params,
                 start_indent="\t\t",
             )
@@ -128,7 +128,7 @@ class ValidationError(RuntimeError):
         super().__init__(message)
         self.cause = cause
         self.data_set = data_set
-        self.validator_index = validator_index
+        self.mapped_validator = mapped_validator
         self.validator_set = validation_manager
         self.error_id = error_id
 
@@ -142,14 +142,14 @@ class ErrorHandler(Generic[DataSetT]):
 
     def __init__(self, data_set: DataSetT):
         self.data_set = data_set
-        self.excs: dict[ValidatorIndex, list[ValidationError]] = {}
+        self.excs: dict[MappedValidatorT, list[ValidationError]] = {}
 
     # pylint: disable=too-many-arguments
     async def catch(
         self,
         msg: str,
         error: Exception,
-        validator_index: ValidatorIndex,
+        mapped_validator: MappedValidatorT,
         validation_manager: "ValidationManager[DataSetT]",
         custom_error_id: Optional[int] = None,
     ):
@@ -162,7 +162,7 @@ class ErrorHandler(Generic[DataSetT]):
             msg,
             error,
             self.data_set,
-            validator_index,
+            mapped_validator,
             validation_manager,
             error_id,
         )
@@ -171,14 +171,14 @@ class ErrorHandler(Generic[DataSetT]):
             exc_info=error_nested,
         )
         async with asyncio.Lock():
-            if validator_index not in self.excs:
-                self.excs[validator_index] = []
-            self.excs[validator_index].append(error_nested)
+            if mapped_validator not in self.excs:
+                self.excs[mapped_validator] = []
+            self.excs[mapped_validator].append(error_nested)
 
     @asynccontextmanager
     async def pokemon_catcher(
         self,
-        validator_index: ValidatorIndex,
+        mapped_validator: MappedValidatorT,
         validation_manager: "ValidationManager[DataSetT]",
         custom_error_id: Optional[int] = None,
     ) -> AsyncGenerator[None, None]:
@@ -186,11 +186,11 @@ class ErrorHandler(Generic[DataSetT]):
             yield None
         except asyncio.TimeoutError as error:
             await self.catch(
-                f"Timeout ({validation_manager.validators[validator_index].timeout.total_seconds()}s) during execution",
+                f"Timeout ({validation_manager.validators[mapped_validator].timeout.total_seconds()}s) during execution",
                 error,
-                validator_index,
+                mapped_validator,
                 validation_manager,
                 custom_error_id,
             )
         except Exception as error:
-            await self.catch(str(error), error, validator_index, validation_manager, custom_error_id)
+            await self.catch(str(error), error, mapped_validator, validation_manager, custom_error_id)
