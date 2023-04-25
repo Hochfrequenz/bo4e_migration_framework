@@ -1,3 +1,6 @@
+"""
+Contains functionality to handle all the ValidationErrors and creating error IDs.
+"""
 import asyncio
 import hashlib
 import random
@@ -182,15 +185,20 @@ class ErrorHandler(Generic[DataSetT]):
         validation_manager: "ValidationManager[DataSetT]",
         custom_error_id: Optional[int] = None,
     ) -> AsyncGenerator[None, None]:
+        """
+        This is an asynchronous context manager to easily implement a pokemon-catcher to catch any errors inside
+        the body and envelops these inside ValidationErrors.
+        """
         try:
             yield None
         except asyncio.TimeoutError as error:
             await self.catch(
-                f"Timeout ({validation_manager.validators[mapped_validator].timeout.total_seconds()}s) during execution",
+                f"Timeout ({validation_manager.validators[mapped_validator].timeout.total_seconds()}s) "
+                f"during execution",
                 error,
                 mapped_validator,
                 validation_manager,
                 custom_error_id,
             )
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-exception-caught
             await self.catch(str(error), error, mapped_validator, validation_manager, custom_error_id)

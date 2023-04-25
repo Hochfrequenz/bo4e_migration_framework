@@ -1,3 +1,6 @@
+"""
+Contains functionality to analyze the result of a validation process
+"""
 import itertools
 from typing import TYPE_CHECKING, Optional
 
@@ -13,6 +16,12 @@ def _extract_error_id(validation_error: ValidationError) -> _IDType:
 
 
 class ValidationResult:
+    """
+    The function `ValidationManager.validate` will return an instance of this class. This class provides properties
+    for further analysis of the ValidationErrors raised during the process. Note that the values are calculated only
+    if you use them - this saves some CPU time if you are only interested in e.g. the succeeding data sets.
+    """
+
     def __init__(
         self,
         validation_manager: "ValidationManager[DataSetT]",
@@ -27,6 +36,7 @@ class ValidationResult:
         self._num_errors_per_id: Optional[dict[_IDType, int]] = None
 
     def _determine_succeeds(self):
+        """Determines which data sets succeeded and groups the validation errors per failed data set"""
         self._succeeded_data_sets = []
         self._data_set_errors = {}
         for data_set, error_handler in self._error_handlers.items():

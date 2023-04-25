@@ -1,3 +1,7 @@
+"""
+Contains functionality to build up a box of information around a validator function before registering it to a
+ValidationManager. This reduces complexity inside the ValidationManager.
+"""
 import asyncio
 import inspect
 import types
@@ -17,6 +21,21 @@ from bomf.validation.core.utils import required_field
 
 
 class Validator(Generic[DataSetT, ValidatorFunctionT]):
+    """
+    Holds the actual validator function:
+        - The parameter list must contain at least one element
+        - The parameter list must be fully type hinted (they will be used for an explicit type check)
+        - The parameter list must not contain POSITIONAL_ONLY parameters
+        - The return type and value will be ignored (prints a warning if present)
+        - It can be either sync or async
+        - A validator will be executed asynchronously iff:
+            - The validator is async
+            - The validator has dependencies which are not finished yet (See `ValidationManager.register`
+              for more details)
+
+    This class will collect some information about the validator function for the ValidationManager.
+    """
+
     def __init__(self, validator_func: ValidatorFunctionT):
         validator_signature = inspect.signature(validator_func)
         if len(validator_signature.parameters) == 0:
@@ -54,12 +73,14 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
     def is_async(
         self: "Validator[DataSetT, ValidatorFunctionT]",
     ) -> TypeGuard["Validator[DataSetT, AsyncValidatorFunction]"]:
+        """True if the validator function is declared as async"""
         return self._is_async
 
     @property
     def is_sync(
         self: "Validator[DataSetT, ValidatorFunctionT]",
     ) -> TypeGuard["Validator[DataSetT, SyncValidatorFunction]"]:
+        """True if the validator function is not declared as async"""
         return not self._is_async
 
     def __hash__(self):
@@ -76,8 +97,14 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
 
 
 class Parameter(Generic[DataSetT]):
-    def __init__(self, provider: "MappedValidator[DataSetT]", name: str, value: Any, param_id: str, provided: bool):
-        self.provider = provider
+    """
+    Encapsulates a single parameter. A parameter must have an ID for better error output.
+    """
+
+    def __init__(
+        self, mapped_validator: "MappedValidator[DataSetT]", name: str, value: Any, param_id: str, provided: bool
+    ):
+        self.mapped_validator = mapped_validator
         self.name = name
         self.value = value
         self.id = param_id
@@ -88,21 +115,32 @@ class Parameter(Generic[DataSetT]):
 
 
 class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
+    """
+    A customized dictionary to hold the parameter list of a validator. Each parameter must refer to the same mapped
+    validator.
+    """
+
+    mapped_validator: "MappedValidator[DataSetT]"
+    param_dict: dict[str, Any]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        provider_set = set(param.provider for param in self.values())
-        if len(provider_set) != 1:
+        mapped_validators = set(param.mapped_validator for param in self.values())
+        if len(mapped_validators) != 1:
             raise ValueError("You cannot add parameters with different providers")
-        provider: "MappedValidator[DataSetT]" = provider_set.pop()
+        mapped_validator: "MappedValidator[DataSetT]" = mapped_validators.pop()
         param_dict: dict[str, Any] = {param.name: param.value for param in self.values() if param.provided}
 
-        self.provider: "MappedValidator[DataSetT]"
-        self.param_dict: dict[str, Any]
-        dict.__setattr__(self, "provider", provider)
+        # hijacke the frozendict to enable to set attributes to this subclass
+        dict.__setattr__(self, "mapped_validator", mapped_validator)
         dict.__setattr__(self, "param_dict", param_dict)
 
 
 class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
+    """
+    A validator which is capable to fill the parameter list by querying a data set instance.
+    """
+
     def __init__(self, validator: Validator[DataSetT, ValidatorFunctionT]):
         self.validator = validator
         self.name = validator.name
@@ -110,6 +148,15 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
 
     @abstractmethod
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
+        """
+        A generator function to return on each yield a parameter list to fill the validator function with it.
+        If a parameter list could not be built you should yield an exception instead but your generator should not
+        raise any exceptions because this will cause the generator to be destroyed (because python does not know where
+        to continue in the generator code after raising an exception).
+
+        Note: You don't have to supply all parameters to support optional ones. However, if there are required
+        parameters not provided the ValidationManager will catch a ValidationError.
+        """
         ...
 
     def __repr__(self) -> str:
@@ -119,16 +166,23 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
     def is_async(
         self: "MappedValidator[DataSetT, ValidatorFunctionT]",
     ) -> TypeGuard["MappedValidator[DataSetT, AsyncValidatorFunction]"]:
-        return self.validator._is_async
+        """True if the validator function is declared as async"""
+        return self.validator.is_async
 
     @property
     def is_sync(
         self: "MappedValidator[DataSetT, ValidatorFunctionT]",
     ) -> TypeGuard["MappedValidator[DataSetT, SyncValidatorFunction]"]:
-        return not self.validator._is_async
+        """True if the validator function is not declared as async"""
+        return not self.validator.is_sync
 
 
 class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
+    """
+    This mapped validator class is for the "every day" usage. It simply queries the data set by the given attribute
+    paths.
+    """
+
     def __init__(
         self, validator: Validator[DataSetT, ValidatorFunctionT], *param_maps: dict[str, str] | frozendict[str, str]
     ):
@@ -139,6 +193,9 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
         self._validate_param_maps()
 
     def _validate_param_maps(self):
+        """
+        Checks if the parameter maps match to the validator signature.
+        """
         for param_map in self.param_maps:
             mapped_params = set(param_map.keys())
             if not mapped_params <= self.validator.param_names:
@@ -171,6 +228,10 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
         return f"PathMappedValidator({self.validator.name}, {tuple(dict(param_map) for param_map in self.param_maps)})"
 
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
+        """
+        Provides all parameter maps to the ValidationManager. If a parameter list could not be filled correctly
+        an error will be yielded.
+        """
         for param_map in self.param_maps:
             parameter_values: dict[str, Parameter] = {}
             skip = False
@@ -188,7 +249,7 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                     value = self.validator.signature.parameters[param_name].default
                     provided = False
                 parameter_values[param_name] = Parameter(
-                    provider=self,
+                    mapped_validator=self,
                     name=param_name,
                     param_id=attr_path,
                     value=value,
