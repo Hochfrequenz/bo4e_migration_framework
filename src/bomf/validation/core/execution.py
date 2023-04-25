@@ -168,6 +168,24 @@ class ValidationManager(Generic[DataSetT]):
         self.dependency_graph.add_edges_from(dependency_graph_edges)
         validation_logger.debug("Registered validator: %s", validator.name)
 
+    async def _dependency_errored(self, current_validator_index: ValidatorIndex) -> bool:
+        dep_exceptions: dict[ValidatorIndex, Exception] = {
+            _dep: self.info.error_handler.excs[_dep]
+            for _dep in self.validators[current_validator_index].depends_on
+            if _dep in self.info.error_handler.excs
+        }
+        if len(dep_exceptions) > 0:
+            await self.info.error_handler.catch(
+                "Execution abandoned due to failing dependent validators: "
+                f"{', '.join(_dep[0].name for _dep in dep_exceptions)}",
+                RuntimeError("Errors in depending validators"),
+                current_validator_index,
+                self,
+                custom_error_id=2,
+            )
+            return True
+        return False
+
     async def _execute_async_validator(
         self,
         validator_index: ValidatorIndex,
@@ -176,23 +194,10 @@ class ValidationManager(Generic[DataSetT]):
         validator = validator_index[0]
         if len(running_dependencies) > 0:
             await asyncio.wait(
-                iter(self.info.tasks[dep] for dep in running_dependencies),
+                [self.info.tasks[dep] for dep in running_dependencies],
                 return_when=asyncio.ALL_COMPLETED,
             )
-        dep_exceptions: dict[ValidatorIndex, Exception] = {
-            _dep: self.info.error_handler.excs[_dep]
-            for _dep in running_dependencies
-            if _dep in self.info.error_handler.excs
-        }
-        if len(dep_exceptions) > 0:
-            await self.info.error_handler.catch(
-                "Execution abandoned due to failing dependent validators: "
-                f"{', '.join(_dep[0].name for _dep in dep_exceptions)}",
-                RuntimeError("Errors in depending validators"),
-                validator_index,
-                self,
-                custom_error_id=2,
-            )
+        if await self._dependency_errored(validator_index):
             return
         for params_or_exc in validator_index[1].provide(self.info.data_set):
             if isinstance(params_or_exc, Exception):
@@ -217,6 +222,8 @@ class ValidationManager(Generic[DataSetT]):
         self.info.states[validator_index] = _ExecutionState.FINISHED
 
     async def _execute_sync_validator(self, validator_index: ValidatorIndex):
+        if await self._dependency_errored(validator_index):
+            return
         execution_info = self.validators[validator_index]
         for params_or_exc in validator_index[1].provide(self.info.data_set):
             if isinstance(params_or_exc, Exception):
@@ -259,6 +266,7 @@ class ValidationManager(Generic[DataSetT]):
                     self._execute_async_validator(validator_index, running_dependencies)
                 )
             else:
+                self.info.tasks[validator_index] = self.info.current_task
                 await self._execute_sync_validator(validator_index)
 
     async def validate(self, *data_sets: DataSetT) -> ValidationResult:

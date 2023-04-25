@@ -31,7 +31,7 @@ class ValidationResult:
         self._data_set_errors = {}
         for data_set, error_handler in self._error_handlers.items():
             if len(error_handler.excs) > 0:
-                self._data_set_errors[data_set] = list(*error_handler.excs.values())
+                self._data_set_errors[data_set] = list(error_handler.excs.values())
             else:
                 self._succeeded_data_sets.append(data_set)
 
@@ -72,7 +72,7 @@ class ValidationResult:
         """
         if self._errors is None:
             self._errors = sorted(
-                itertools.chain.from_iterable(self.data_set_errors.values()),
+                itertools.chain.from_iterable(*self.data_set_errors.values()),
                 key=_extract_error_id,
             )
         return self._errors

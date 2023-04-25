@@ -71,6 +71,9 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
     def __ne__(self, other):
         return not isinstance(other, Validator) or self.func != other.func
 
+    def __repr__(self) -> str:
+        return f"Validator({self.name})"
+
 
 class Parameter(Generic[DataSetT]):
     def __init__(self, provider: "ParameterProvider[DataSetT]", name: str, value: Any, param_id: str, provided: bool):
@@ -79,6 +82,9 @@ class Parameter(Generic[DataSetT]):
         self.value = value
         self.id = param_id
         self.provided = provided
+
+    def __repr__(self) -> str:
+        return f"Parameter({self.id} -> {self.name}: {self.value})"
 
 
 class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
@@ -105,11 +111,18 @@ class ParameterProvider(ABC, Generic[DataSetT]):
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
         ...
 
+    def __repr__(self) -> str:
+        return f"ParameterProvider({self.validator.name})"
+
 
 class PathParameterProvider(ParameterProvider[DataSetT]):
-    def __init__(self, validator: Validator[DataSetT, ValidatorFunctionT], *param_maps: dict[str, str]):
+    def __init__(
+        self, validator: Validator[DataSetT, ValidatorFunctionT], *param_maps: dict[str, str] | frozendict[str, str]
+    ):
         super().__init__(validator)
-        self.param_maps: list[dict[str, str]] = list(param_maps)
+        self.param_maps: tuple[frozendict[str, str], ...] = tuple(
+            param_map if isinstance(param_map, frozendict) else frozendict(param_map) for param_map in param_maps
+        )
         self._validate_param_maps()
 
     def _validate_param_maps(self):
@@ -123,6 +136,20 @@ class PathParameterProvider(ParameterProvider[DataSetT]):
                 raise ValueError(
                     f"{self.validator.name} misses parameter(s) {self.validator.required_param_names - mapped_params}"
                 )
+
+    def __eq__(self, other: "PathParameterProvider[DataSetT]") -> bool:
+        return isinstance(other, PathParameterProvider) and self.param_maps == other.param_maps
+
+    def __ne__(self, other: "PathParameterProvider[DataSetT]") -> bool:
+        return not isinstance(other, PathParameterProvider) or self.param_maps != other.param_maps
+
+    def __hash__(self) -> int:
+        return hash(self.param_maps)
+
+    def __repr__(self) -> str:
+        return (
+            f"PathParameterProvider({self.validator.name}, {tuple(dict(param_map) for param_map in self.param_maps)})"
+        )
 
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
         for param_map in self.param_maps:
