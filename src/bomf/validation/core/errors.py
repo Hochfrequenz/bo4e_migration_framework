@@ -112,19 +112,19 @@ class ValidationError(RuntimeError):
         provided_params = validation_manager.info.running_tasks[
             validation_manager.info.tasks[validator_index]
         ].current_provided_params
-        assert provided_params is not None, "This shouldn't fail"
-        formatted_param_infos = format_parameter_infos(
-            validator_index[0],
-            provided_params,
-            start_indent="\t\t",
-        )
         message = (
             f"{error_id}: {message_detail}\n"
             f"\tDataSet: {data_set.__class__.__name__}(id={data_set.get_id()})\n"
             f"\tError ID: {error_id}\n"
-            f"\tValidator function: {validator_index[0].name}\n"
-            f"\tParameter information: \n{formatted_param_infos}"
+            f"\tValidator function: {validator_index[0].name}"
         )
+        if provided_params is not None:
+            formatted_param_infos = format_parameter_infos(
+                validator_index[0],
+                provided_params,
+                start_indent="\t\t",
+            )
+            message += f"\n\tParameter information: \n{formatted_param_infos}"
         super().__init__(message)
         self.cause = cause
         self.data_set = data_set
@@ -184,5 +184,13 @@ class ErrorHandler(Generic[DataSetT]):
     ) -> AsyncGenerator[None, None]:
         try:
             yield None
+        except asyncio.TimeoutError as error:
+            await self.catch(
+                f"Timeout ({validation_manager.validators[validator_index].timeout.total_seconds()}s) during execution",
+                error,
+                validator_index,
+                validation_manager,
+                custom_error_id,
+            )
         except Exception as error:
             await self.catch(str(error), error, validator_index, validation_manager, custom_error_id)

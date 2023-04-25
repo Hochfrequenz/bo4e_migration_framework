@@ -20,7 +20,7 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
     def __init__(self, validator_func: ValidatorFunctionT):
         validator_signature = inspect.signature(validator_func)
         if len(validator_signature.parameters) == 0:
-            raise ValueError("The function must take at least one argument")
+            raise ValueError("The validator function must take at least one argument")
         if any(param.kind == param.POSITIONAL_ONLY for param in validator_signature.parameters.values()):
             raise ValueError("The function parameters must not contain positional only parameters")
         if validator_signature.return_annotation not in (None, validator_signature.empty):

@@ -71,10 +71,13 @@ class ValidationResult:
         It is sorted by their error ID to enable grouping by it using itertools.
         """
         if self._errors is None:
-            self._errors = sorted(
-                itertools.chain.from_iterable(*self.data_set_errors.values()),
-                key=_extract_error_id,
-            )
+            if len(self.data_set_errors) > 0:
+                self._errors = sorted(
+                    itertools.chain.from_iterable(*self.data_set_errors.values()),
+                    key=_extract_error_id,
+                )
+            else:
+                self._errors = []
         return self._errors
 
     @property
