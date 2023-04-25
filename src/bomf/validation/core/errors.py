@@ -34,7 +34,7 @@ def format_parameter_infos(
         )
         param_description = (
             f"value='{provided_params[param_name].value if is_provided else param.default}', "
-            f"id='{provided_params[param_name].id if param_name in provided_params else 'unprovided'}', "
+            f"id='{provided_params[param_name].param_id if param_name in provided_params else 'unprovided'}', "
             f"{'required' if is_required else 'optional'}, "
             f"{'provided' if is_provided else 'unprovided'}"
         )

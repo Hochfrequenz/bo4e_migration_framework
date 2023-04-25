@@ -115,8 +115,6 @@ class DependencyGraph(nx.DiGraph):
     Replace ValidationManager.validators by node attributes.
     """
 
-    pass
-
 
 class ValidationManager(Generic[DataSetT]):
     """
@@ -135,6 +133,10 @@ class ValidationManager(Generic[DataSetT]):
 
     @property
     def info(self) -> _RuntimeExecutionInfo:
+        """
+        Returns the _RuntimeExecutionInfo object.
+        This property is used to ignore mypy complains about optional blabla...
+        """
         assert self._runtime_execution_info is not None
         return self._runtime_execution_info
 

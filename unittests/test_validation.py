@@ -30,8 +30,8 @@ finishing_order: list[ValidatorFunctionT]
 
 
 def check_multiple_registration(x: str):
-    assert param("x").id in ("x", "z.x")
-    if param("x").id == "x":
+    assert param("x").param_id in ("x", "z.x")
+    if param("x").param_id == "x":
         assert x == "lo16"
     else:
         assert x == "Hello"
@@ -68,12 +68,12 @@ def check_required_and_optional_with_utility(z: Wrapper) -> None:
 def check_with_param_info(x: str, zz: str = "test"):
     x_param = param("x")
     assert x_param.name == "x"
-    assert x_param.id == "x"
+    assert x_param.param_id == "x"
     assert x_param.provided
     assert x_param.value == x
     zz_param = param("zz")
     assert zz_param.name == "zz"
-    assert zz_param.id == "z.z"
+    assert zz_param.param_id == "z.z"
     assert not zz_param.provided
     assert zz_param.value == zz and zz == "test"
 

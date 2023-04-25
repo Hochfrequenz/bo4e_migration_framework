@@ -15,5 +15,5 @@ AsyncValidatorFunction: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
 SyncValidatorFunction: TypeAlias = Callable[..., None]
 ValidatorFunction: TypeAlias = AsyncValidatorFunction | SyncValidatorFunction
 ValidatorFunctionT = TypeVar("ValidatorFunctionT", SyncValidatorFunction, AsyncValidatorFunction)
-ValidatorT: TypeAlias = "Validator[DataSetT, ValidatorFunctionT]"
-MappedValidatorT: TypeAlias = "MappedValidator[DataSetT, ValidatorFunctionT]"
+ValidatorT: TypeAlias = "Validator[DataSetT, ValidatorFunctionT]"  # pylint: disable=invalid-name
+MappedValidatorT: TypeAlias = "MappedValidator[DataSetT, ValidatorFunctionT]"  # pylint: disable=invalid-name

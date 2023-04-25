@@ -96,22 +96,24 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
         return f"Validator({self.name})"
 
 
+# pylint: disable=too-few-public-methods
 class Parameter(Generic[DataSetT]):
     """
     Encapsulates a single parameter. A parameter must have an ID for better error output.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self, mapped_validator: "MappedValidator[DataSetT]", name: str, value: Any, param_id: str, provided: bool
     ):
         self.mapped_validator = mapped_validator
         self.name = name
         self.value = value
-        self.id = param_id
+        self.param_id = param_id
         self.provided = provided
 
     def __repr__(self) -> str:
-        return f"Parameter({self.id} -> {self.name}: {self.value})"
+        return f"Parameter({self.param_id} -> {self.name}: {self.value})"
 
 
 class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
@@ -157,7 +159,6 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
         Note: You don't have to supply all parameters to support optional ones. However, if there are required
         parameters not provided the ValidationManager will catch a ValidationError.
         """
-        ...
 
     def __repr__(self) -> str:
         return f"MappedValidator({self.name})"
