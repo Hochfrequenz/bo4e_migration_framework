@@ -6,15 +6,17 @@ import asyncio
 import inspect
 import types
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Generic, TypeGuard, Union
+from typing import Any, Generator, Generic, TypeGuard, Union, overload
 
 from frozendict import frozendict
 
 from bomf.validation.core.types import (
     AsyncValidatorFunction,
     DataSetT,
+    MappedValidatorT,
     SyncValidatorFunction,
     ValidatorFunctionT,
+    ValidatorT,
     validation_logger,
 )
 from bomf.validation.core.utils import required_field
@@ -48,13 +50,14 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
                 validator_func.__name__,
                 validator_signature.return_annotation,
             )
+        param: inspect.Parameter
         for param in validator_signature.parameters.values():
             if param.annotation == param.empty:
                 raise ValueError(f"The parameter {param.name} has no annotated type.")
             if isinstance(param.annotation, types.UnionType):
                 # This is a little workaround because typeguards check_type function doesn't work with '|' notation
                 # but with Union.
-                param._annotation = Union[*param.annotation.__args__]
+                param._annotation = Union[*param.annotation.__args__]  # type: ignore[attr-defined]
 
         self.func: ValidatorFunctionT = validator_func
         self.signature = validator_signature
@@ -66,22 +69,8 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
         }
         self.optional_param_names = self.param_names - self.required_param_names
         self.name = validator_func.__name__
-        self._is_async = asyncio.iscoroutinefunction(validator_func)
+        self.is_async: bool = asyncio.iscoroutinefunction(validator_func)
         validation_logger.debug("Created validator: %s", self.name)
-
-    @property
-    def is_async(
-        self: "Validator[DataSetT, ValidatorFunctionT]",
-    ) -> TypeGuard["Validator[DataSetT, AsyncValidatorFunction]"]:
-        """True if the validator function is declared as async"""
-        return self._is_async
-
-    @property
-    def is_sync(
-        self: "Validator[DataSetT, ValidatorFunctionT]",
-    ) -> TypeGuard["Validator[DataSetT, SyncValidatorFunction]"]:
-        """True if the validator function is not declared as async"""
-        return not self._is_async
 
     def __hash__(self):
         return hash(self.func)
@@ -103,9 +92,7 @@ class Parameter(Generic[DataSetT]):
     """
 
     # pylint: disable=too-many-arguments
-    def __init__(
-        self, mapped_validator: "MappedValidator[DataSetT]", name: str, value: Any, param_id: str, provided: bool
-    ):
+    def __init__(self, mapped_validator: MappedValidatorT, name: str, value: Any, param_id: str, provided: bool):
         self.mapped_validator = mapped_validator
         self.name = name
         self.value = value
@@ -122,7 +109,7 @@ class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
     validator.
     """
 
-    mapped_validator: "MappedValidator[DataSetT]"
+    mapped_validator: MappedValidatorT
     param_dict: dict[str, Any]
 
     def __init__(self, *args, **kwargs):
@@ -130,7 +117,7 @@ class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
         mapped_validators = set(param.mapped_validator for param in self.values())
         if len(mapped_validators) != 1:
             raise ValueError("You cannot add parameters with different providers")
-        mapped_validator: "MappedValidator[DataSetT]" = mapped_validators.pop()
+        mapped_validator: MappedValidatorT = mapped_validators.pop()
         param_dict: dict[str, Any] = {param.name: param.value for param in self.values() if param.provided}
 
         # hijacke the frozendict to enable to set attributes to this subclass
@@ -143,8 +130,8 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
     A validator which is capable to fill the parameter list by querying a data set instance.
     """
 
-    def __init__(self, validator: Validator[DataSetT, ValidatorFunctionT]):
-        self.validator = validator
+    def __init__(self, validator: ValidatorT):
+        self.validator: ValidatorT = validator
         self.name = validator.name
         validation_logger.debug("Created ParameterProvider: %s, %s", self.__class__.__name__, self.validator.name)
 
@@ -164,18 +151,9 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
         return f"MappedValidator({self.name})"
 
     @property
-    def is_async(
-        self: "MappedValidator[DataSetT, ValidatorFunctionT]",
-    ) -> TypeGuard["MappedValidator[DataSetT, AsyncValidatorFunction]"]:
+    def is_async(self) -> bool:
         """True if the validator function is declared as async"""
         return self.validator.is_async
-
-    @property
-    def is_sync(
-        self: "MappedValidator[DataSetT, ValidatorFunctionT]",
-    ) -> TypeGuard["MappedValidator[DataSetT, SyncValidatorFunction]"]:
-        """True if the validator function is not declared as async"""
-        return not self.validator.is_sync
 
 
 class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
@@ -184,9 +162,7 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
     paths.
     """
 
-    def __init__(
-        self, validator: Validator[DataSetT, ValidatorFunctionT], *param_maps: dict[str, str] | frozendict[str, str]
-    ):
+    def __init__(self, validator: ValidatorT, *param_maps: dict[str, str] | frozendict[str, str]):
         super().__init__(validator)
         self.param_maps: tuple[frozendict[str, str], ...] = tuple(
             param_map if isinstance(param_map, frozendict) else frozendict(param_map) for param_map in param_maps
@@ -208,24 +184,24 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                     f"{self.validator.name} misses parameter(s) {self.validator.required_param_names - mapped_params}"
                 )
 
-    def __eq__(self, other: "PathMappedValidator[DataSetT]") -> bool:
+    def __eq__(self, other):
         return (
             isinstance(other, PathMappedValidator)
             and self.validator == other.validator
             and self.param_maps == other.param_maps
         )
 
-    def __ne__(self, other: "PathMappedValidator[DataSetT]") -> bool:
+    def __ne__(self, other):
         return (
             not isinstance(other, PathMappedValidator)
             or self.validator != other.validator
             or self.param_maps != other.param_maps
         )
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         return hash(self.param_maps) + hash(self.validator)
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return f"PathMappedValidator({self.validator.name}, {tuple(dict(param_map) for param_map in self.param_maps)})"
 
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
@@ -258,3 +234,33 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                 )
             if not skip:
                 yield Parameters(**parameter_values)
+
+
+@overload
+def is_async(
+    validator: "MappedValidatorT",
+) -> TypeGuard["MappedValidator[Any, AsyncValidatorFunction]"]:
+    ...
+
+
+@overload
+def is_async(
+    validator: "ValidatorT",
+) -> TypeGuard["Validator[Any, AsyncValidatorFunction]"]:
+    ...
+
+
+def is_async(
+    validator: "ValidatorT | MappedValidatorT",
+) -> TypeGuard["Validator[Any, AsyncValidatorFunction] | MappedValidator[Any, AsyncValidatorFunction]"]:
+    """True if the validator function is declared as async"""
+    if isinstance(validator, Validator):
+        return validator.is_async
+    return validator.validator.is_async
+
+
+def is_sync(
+    validator: MappedValidatorT,
+) -> TypeGuard[MappedValidator[Any, SyncValidatorFunction]]:
+    """True if the validator function is declared as sync"""
+    return not validator.validator.is_async

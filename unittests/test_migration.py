@@ -13,11 +13,13 @@ from bomf import (
     MigrationStrategy,
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
-    ValidatorSet,
+    ValidationManager,
 )
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
-from bomf.provider import KeyTyp, SourceDataModel
+from bomf.provider import KeyTyp
+from bomf.validation import PathMappedValidator, Validator
+from bomf.validation.core import SyncValidatorFunction
 
 _MySourceDataModel = Dict[str, str]
 _MyKeyTyp = str
@@ -59,13 +61,16 @@ class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
         return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 
-async def _my_rule(data: Dict[str, str]) -> None:
+def _my_rule(data: dict[str, str]):
     if "invalid" in data:
         raise ValueError("'invalid' in data")
 
 
-_my_validation = ValidatorSet[_MyIntermediateDataModel]()
-_my_validation.register(_my_rule, {"data": "data"})
+_my_mapped_validator: PathMappedValidator[_MyIntermediateDataModel, SyncValidatorFunction] = PathMappedValidator(
+    Validator(_my_rule), {"data": "data"}
+)
+_my_validation = ValidationManager[_MyIntermediateDataModel]()
+_my_validation.register(_my_mapped_validator)
 
 
 class _MyToTargetMapper(Bo4eDataSetToTargetMapper[_MyTargetDataModel, _MyIntermediateDataModel]):

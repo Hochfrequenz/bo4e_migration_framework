@@ -10,7 +10,12 @@ from bomf import ValidationManager
 from bomf.model import Bo4eDataSet
 from bomf.validation import PathMappedValidator, Validator, optional_field, param, required_field
 from bomf.validation.core import ValidationError, ValidatorFunctionT
-from bomf.validation.core.types import MappedValidatorT
+from bomf.validation.core.types import (
+    AsyncValidatorFunction,
+    MappedValidatorT,
+    SyncValidatorFunction,
+    ValidatorFunction,
+)
 
 
 class Wrapper(BaseModel):
@@ -26,7 +31,7 @@ class DataSetTest(Bo4eDataSet):
 
 
 dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper.construct(x="Hello"))
-finishing_order: list[ValidatorFunctionT]
+finishing_order: list[ValidatorFunction]
 
 
 def check_multiple_registration(x: str):
@@ -117,22 +122,28 @@ def type_check_fail_y(x: str, y: str) -> None:
     pass
 
 
-validator_check_multiple_registration = Validator(check_multiple_registration)
-validator_check_x_expensive = Validator(check_x_expensive)
-validator_check_y_positive = Validator(check_y_positive)
-validator_check_xy_ending = Validator(check_xy_ending)
-validator_check_required_and_optional = Validator(check_required_and_optional)
-validator_check_required_and_optional_with_utility = Validator(check_required_and_optional_with_utility)
-validator_check_with_param_info = Validator(check_with_param_info)
-validator_unprovided_but_required = Validator(unprovided_but_required)
-validator_check_fail = Validator(check_fail)
-validator_check_fail2 = Validator(check_fail2)
-validator_check_fail3 = Validator(check_fail3)
-validator_check_different_fails = Validator(check_different_fails)
+validator_check_multiple_registration: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    check_multiple_registration
+)
+validator_check_x_expensive: Validator[DataSetTest, AsyncValidatorFunction] = Validator(check_x_expensive)
+validator_check_y_positive: Validator[DataSetTest, AsyncValidatorFunction] = Validator(check_y_positive)
+validator_check_xy_ending: Validator[DataSetTest, AsyncValidatorFunction] = Validator(check_xy_ending)
+validator_check_required_and_optional: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    check_required_and_optional
+)
+validator_check_required_and_optional_with_utility: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    check_required_and_optional_with_utility
+)
+validator_check_with_param_info: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_with_param_info)
+validator_unprovided_but_required: Validator[DataSetTest, SyncValidatorFunction] = Validator(unprovided_but_required)
+validator_check_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail)
+validator_check_fail2: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail2)
+validator_check_fail3: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail3)
+validator_check_different_fails: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_different_fails)
 # validator_no_params = Validator(no_params)
 # validator_missing_annotation_y = Validator(missing_annotation_y)
 # validator_unmapped_param_rofl = Validator(unmapped_param_rofl)
-validator_type_check_fail_y = Validator(type_check_fail_y)
+validator_type_check_fail_y: Validator[DataSetTest, SyncValidatorFunction] = Validator(type_check_fail_y)
 
 
 class TestValidation:

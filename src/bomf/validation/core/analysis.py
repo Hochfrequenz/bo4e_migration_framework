@@ -2,7 +2,7 @@
 Contains functionality to analyze the result of a validation process
 """
 import itertools
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Generic, Optional
 
 from bomf.validation.core.errors import ErrorHandler, ValidationError, _IDType
 from bomf.validation.core.types import DataSetT
@@ -15,7 +15,7 @@ def _extract_error_id(validation_error: ValidationError) -> _IDType:
     return validation_error.error_id
 
 
-class ValidationResult:
+class ValidationResult(Generic[DataSetT]):
     """
     The function `ValidationManager.validate` will return an instance of this class. This class provides properties
     for further analysis of the ValidationErrors raised during the process. Note that the values are calculated only
@@ -41,7 +41,7 @@ class ValidationResult:
         self._data_set_errors = {}
         for data_set, error_handler in self._error_handlers.items():
             if len(error_handler.excs) > 0:
-                self._data_set_errors[data_set] = list(error_handler.excs.values())
+                self._data_set_errors[data_set] = list(itertools.chain.from_iterable(error_handler.excs.values()))
             else:
                 self._succeeded_data_sets.append(data_set)
 
@@ -50,6 +50,7 @@ class ValidationResult:
         """List of data sets which got validated without any errors"""
         if self._succeeded_data_sets is None:
             self._determine_succeeds()
+            assert self._succeeded_data_sets is not None
         return self._succeeded_data_sets
 
     @property
@@ -57,6 +58,7 @@ class ValidationResult:
         """Maps data sets in which errors got raised to a list of ValidationErrors"""
         if self._data_set_errors is None:
             self._determine_succeeds()
+            assert self._data_set_errors is not None
         return self._data_set_errors
 
     @property
@@ -83,7 +85,7 @@ class ValidationResult:
         if self._errors is None:
             if len(self.data_set_errors) > 0:
                 self._errors = sorted(
-                    itertools.chain.from_iterable(*self.data_set_errors.values()),
+                    itertools.chain.from_iterable(self.data_set_errors.values()),
                     key=_extract_error_id,
                 )
             else:

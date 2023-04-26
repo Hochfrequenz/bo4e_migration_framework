@@ -193,8 +193,9 @@ class ErrorHandler(Generic[DataSetT]):
             yield None
         except asyncio.TimeoutError as error:
             await self.catch(
-                f"Timeout ({validation_manager.validators[mapped_validator].timeout.total_seconds()}s) "
-                f"during execution",
+                f"Timeout ("
+                f"{validation_manager.validators[mapped_validator].timeout.total_seconds()}"  # type:ignore[union-attr]
+                f"s) during execution",
                 error,
                 mapped_validator,
                 validation_manager,
