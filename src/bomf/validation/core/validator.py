@@ -112,8 +112,8 @@ class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
     mapped_validator: MappedValidatorT
     param_dict: dict[str, Any]
 
-    def __new__(cls, mapped_validator: MappedValidatorT, /, **kwargs):
-        return super().__new__(cls, **kwargs)
+    def __new__(cls, mapped_validator: MappedValidatorT, /, *args, **kwargs):
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, mapped_validator: MappedValidatorT, /, **kwargs):
         super().__init__(**kwargs)

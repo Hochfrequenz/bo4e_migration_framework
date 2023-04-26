@@ -26,12 +26,13 @@ def param(param_name: str) -> Parameter:
     # call_stack[0] -> this function
     # call_stack[1] -> must be the validator function
     # call_stack[2] -> should be either `_execute_sync_validator` or `_execute_async_validator`
+    validation_manager: Optional[ValidationManager] = None
     try:
-        validation_manager: Optional[ValidationManager] = call_stack[2].frame.f_locals["self"]
+        validation_manager = call_stack[2].frame.f_locals["self"]
         if not isinstance(validation_manager, ValidationManager):
             validation_manager = None
     except KeyError:
-        validation_manager: Optional[ValidationManager] = None
+        pass
 
     if validation_manager is None:
         raise RuntimeError(

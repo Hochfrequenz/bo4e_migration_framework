@@ -123,7 +123,7 @@ def unmapped_param_rofl(x: str, rofl: str) -> None:
 
 
 def type_check_fail_y(x: str, y: str) -> int:
-    pass
+    return 0
 
 
 validator_check_multiple_registration: Validator[DataSetTest, SyncValidatorFunction] = Validator(
@@ -147,7 +147,9 @@ validator_check_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(
 validator_check_fail2: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail2)
 validator_check_fail3: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail3)
 validator_check_different_fails: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_different_fails)
-validator_type_check_fail_y: Validator[DataSetTest, SyncValidatorFunction] = Validator(type_check_fail_y)
+validator_type_check_fail_y: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    type_check_fail_y  # type:ignore[arg-type]
+)
 
 
 class TestValidation:
