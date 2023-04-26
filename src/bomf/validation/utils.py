@@ -27,10 +27,15 @@ def param(param_name: str) -> Parameter:
     # call_stack[1] -> must be the validator function
     # call_stack[2] -> should be either `_execute_sync_validator` or `_execute_async_validator`
     try:
-        validation_manager: ValidationManager = call_stack[2].frame.f_locals["self"]
+        validation_manager: Optional[ValidationManager] = call_stack[2].frame.f_locals["self"]
+        if not isinstance(validation_manager, ValidationManager):
+            validation_manager = None
     except KeyError:
-        raise RuntimeError(  # pylint: disable=raise-missing-from
-            "You can call this function only directly from inside a function"
+        validation_manager: Optional[ValidationManager] = None
+
+    if validation_manager is None:
+        raise RuntimeError(
+            "You can call this function only directly from inside a function "
             "which is executed by the validation framework"
         )
 

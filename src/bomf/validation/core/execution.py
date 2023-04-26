@@ -72,20 +72,6 @@ class _RuntimeExecutionInfo(Generic[DataSetT]):
         return asyncio.current_task()
 
     @property
-    def current_state(self) -> _ExecutionState:
-        """The state of the current executing task"""
-        cur_val = self.running_tasks[self.current_task].current_mapped_validator
-        assert cur_val is not None
-        return self.states[cur_val]
-
-    @current_state.setter
-    def current_state(self, new_state: _ExecutionState):
-        """The state of the current executing task"""
-        cur_val = self.running_tasks[self.current_task].current_mapped_validator
-        assert cur_val is not None
-        self.states[cur_val] = new_state
-
-    @property
     def current_mapped_validator(self) -> Optional[MappedValidatorSyncAsync]:
         """The mapped validator of the current executing task"""
         return self.running_tasks[self.current_task].current_mapped_validator
@@ -94,11 +80,6 @@ class _RuntimeExecutionInfo(Generic[DataSetT]):
     def current_mapped_validator(self, new_validator_index: MappedValidatorSyncAsync):
         """The mapped validator of the current executing task"""
         self.running_tasks[self.current_task].current_mapped_validator = new_validator_index
-
-    @current_mapped_validator.deleter
-    def current_mapped_validator(self):
-        """The mapped validator of the current executing task"""
-        self.running_tasks[self.current_task].current_mapped_validator = None
 
     @property
     def current_provided_params(self) -> Optional[Parameters[DataSetT]]:

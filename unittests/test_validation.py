@@ -60,7 +60,7 @@ async def check_xy_ending(x: str, y: int) -> None:
     finishing_order.append(check_xy_ending)
 
 
-def check_required_and_optional(zx: str, zz: Optional[str] = None) -> None:
+def check_required_and_optional(zx: str, zz: str | None = None) -> None:
     assert zx == "Hello"
     assert zz is None
 
@@ -81,6 +81,10 @@ def check_with_param_info(x: str, zz: str = "test"):
     assert zz_param.param_id == "z.z"
     assert not zz_param.provided
     assert zz_param.value == zz and zz == "test"
+
+
+def check_with_param_info_fail(zz: str = "test"):
+    unmapped_param = param("zz")
 
 
 def unprovided_but_required(zz: str):
@@ -118,7 +122,7 @@ def unmapped_param_rofl(x: str, rofl: str) -> None:
     pass
 
 
-def type_check_fail_y(x: str, y: str) -> None:
+def type_check_fail_y(x: str, y: str) -> int:
     pass
 
 
@@ -135,6 +139,9 @@ validator_check_required_and_optional_with_utility: Validator[DataSetTest, SyncV
     check_required_and_optional_with_utility
 )
 validator_check_with_param_info: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_with_param_info)
+validator_check_with_param_info_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    check_with_param_info_fail
+)
 validator_unprovided_but_required: Validator[DataSetTest, SyncValidatorFunction] = Validator(unprovided_but_required)
 validator_check_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail)
 validator_check_fail2: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail2)
@@ -144,7 +151,7 @@ validator_type_check_fail_y: Validator[DataSetTest, SyncValidatorFunction] = Val
 
 
 class TestValidation:
-    async def test_async_validation(self):
+    async def test_async_validation_and_result(self):
         """
         This test checks if the validation functions run concurrently by just ensuring that the expensive task
         (simulated with sleep) will finish always at last.
@@ -155,7 +162,14 @@ class TestValidation:
         validation_manager.register(PathMappedValidator(validator_check_x_expensive, {"x": "x"}))
         validation_manager.register(PathMappedValidator(validator_check_y_positive, {"y": "y"}))
         validation_summary = await validation_manager.validate(dataset_instance)
+        assert validation_summary.total == 1
+        assert validation_summary.num_succeeds == 1
+        assert len(validation_summary.succeeded_data_sets) == 1
+        assert validation_summary.succeeded_data_sets[0] == dataset_instance
+        assert validation_summary.num_fails == 0
+        assert len(validation_summary.data_set_errors) == 0
         assert validation_summary.num_errors_total == 0
+        assert len(validation_summary.num_errors_per_id) == 0
         assert finishing_order == [check_y_positive, check_x_expensive]
 
     async def test_depend_validation(self):
@@ -344,6 +358,34 @@ class TestValidation:
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
+
+    @staticmethod
+    def wrapper_without_self_for_coverage():
+        def more_call_stack():
+            param("x")
+
+        more_call_stack()
+
+    async def test_param_info_fail(self):
+        expected_error = "did not provide parameter information for parameter 'zz'"
+        validation_manager = ValidationManager[DataSetTest]()
+        validation_manager.register(
+            PathMappedValidator(validator_check_with_param_info_fail, {}),
+        )
+        validation_summary = await validation_manager.validate(dataset_instance)
+        assert any(expected_error in str(error) for error in validation_summary.all_errors)
+        with pytest.raises(RuntimeError) as error:
+            param("x")
+        assert (
+            "You can call this function only directly from inside a function "
+            "which is executed by the validation framework" == str(error.value)
+        )
+        with pytest.raises(RuntimeError) as error:
+            TestValidation.wrapper_without_self_for_coverage()
+        assert (
+            "You can call this function only directly from inside a function "
+            "which is executed by the validation framework" == str(error.value)
+        )
 
     async def test_error_ids(self):
         validation_manager = ValidationManager[DataSetTest]()

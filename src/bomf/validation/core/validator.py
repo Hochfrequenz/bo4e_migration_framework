@@ -112,12 +112,15 @@ class Parameters(frozendict[str, Parameter], Generic[DataSetT]):
     mapped_validator: MappedValidatorT
     param_dict: dict[str, Any]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __new__(cls, mapped_validator: MappedValidatorT, /, **kwargs):
+        return super().__new__(cls, **kwargs)
+
+    def __init__(self, mapped_validator: MappedValidatorT, /, **kwargs):
+        super().__init__(**kwargs)
         mapped_validators = set(param.mapped_validator for param in self.values())
-        if len(mapped_validators) != 1:
+        if len(mapped_validators) > 1 or len(mapped_validators) == 1 and mapped_validators.pop() != mapped_validator:
             raise ValueError("You cannot add parameters with different providers")
-        mapped_validator: MappedValidatorT = mapped_validators.pop()
+
         param_dict: dict[str, Any] = {param.name: param.value for param in self.values() if param.provided}
 
         # hijacke the frozendict to enable to set attributes to this subclass
@@ -233,7 +236,7 @@ class PathMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                     provided=provided,
                 )
             if not skip:
-                yield Parameters(**parameter_values)
+                yield Parameters(self, **parameter_values)
 
 
 @overload
