@@ -140,9 +140,6 @@ validator_check_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(
 validator_check_fail2: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail2)
 validator_check_fail3: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail3)
 validator_check_different_fails: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_different_fails)
-# validator_no_params = Validator(no_params)
-# validator_missing_annotation_y = Validator(missing_annotation_y)
-# validator_unmapped_param_rofl = Validator(unmapped_param_rofl)
 validator_type_check_fail_y: Validator[DataSetTest, SyncValidatorFunction] = Validator(type_check_fail_y)
 
 

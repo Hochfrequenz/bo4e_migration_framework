@@ -131,7 +131,6 @@ class ValidationManager(Generic[DataSetT]):
 
     def __init__(self):
         self.dependency_graph: DependencyGraph = DependencyGraph()
-        # self.validator_search_index: dict[ValidatorT, list[MappedValidator[DataSetT]]] = {}
         self.validators: dict[MappedValidatorSyncAsync, _ExecutionInfo] = {}
         self._runtime_execution_info: Optional[_RuntimeExecutionInfo] = None
 
