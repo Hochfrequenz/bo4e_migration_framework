@@ -1,6 +1,7 @@
 import asyncio
+import re
 from datetime import timedelta
-from typing import Optional
+from typing import Any, Iterator, Optional
 
 import pytest
 from frozendict import frozendict
@@ -8,7 +9,7 @@ from pydantic import BaseModel, Required
 
 from bomf import ValidationManager
 from bomf.model import Bo4eDataSet
-from bomf.validation import PathMappedValidator, Validator, optional_field, param, required_field
+from bomf.validation import Query, QueryMappedValidator, Validator, optional_field, param, required_field
 from bomf.validation.core import ValidationError, ValidatorFunctionT
 from bomf.validation.core.types import (
     AsyncValidatorFunction,
@@ -16,6 +17,7 @@ from bomf.validation.core.types import (
     SyncValidatorFunction,
     ValidatorFunction,
 )
+from bomf.validation.path_map import PathMappedValidator
 
 
 class Wrapper(BaseModel):
@@ -30,7 +32,20 @@ class DataSetTest(Bo4eDataSet):
     a: int = -1
 
 
+class SpecialDataSet(Bo4eDataSet):
+    x: list[Wrapper]
+    y: str
+
+
+def iter_list(list_to_iter: list[Any]) -> Iterator[tuple[Any, str]]:
+    return ((el, f"[{index}]") for index, el in enumerate(list_to_iter))
+
+
 dataset_instance = DataSetTest(x="lo16", y=16, z=Wrapper.construct(x="Hello"))
+special_dataset_instance = SpecialDataSet(
+    x=[Wrapper.construct(x="Hello"), Wrapper.construct(x="World"), Wrapper.construct(x="!")],
+    y="lul",
+)
 finishing_order: list[ValidatorFunction]
 
 
@@ -81,6 +96,20 @@ def check_with_param_info(x: str, zz: str = "test"):
     assert zz_param.param_id == "z.z"
     assert not zz_param.provided
     assert zz_param.value == zz and zz == "test"
+
+
+def check_special_data_set(x: str, y: str):
+    x_param = param("x")
+    assert re.match(r"x\[\d+\]\.x", x_param.param_id)
+    assert x_param.provided
+    finishing_order.append(check_special_data_set)
+
+
+def check_special_data_set_optional(x: str, y: str = "Hello"):
+    x_param = param("x")
+    assert re.match(r"x\[\d+\]\.x", x_param.param_id)
+    assert x_param.provided
+    finishing_order.append(check_special_data_set_optional)
 
 
 def check_with_param_info_fail(zz: str = "test"):
@@ -141,6 +170,10 @@ validator_check_required_and_optional_with_utility: Validator[DataSetTest, SyncV
 validator_check_with_param_info: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_with_param_info)
 validator_check_with_param_info_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(
     check_with_param_info_fail
+)
+validator_check_special_data_set: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_special_data_set)
+validator_check_special_data_set_optional: Validator[DataSetTest, SyncValidatorFunction] = Validator(
+    check_special_data_set_optional
 )
 validator_unprovided_but_required: Validator[DataSetTest, SyncValidatorFunction] = Validator(unprovided_but_required)
 validator_check_fail: Validator[DataSetTest, SyncValidatorFunction] = Validator(check_fail)
@@ -430,3 +463,42 @@ class TestValidation:
         )
         validation_summary = await validation_manager.validate(dataset_instance)
         assert validation_summary.num_errors_total == 0
+
+    async def test_special_data_set(self):
+        global finishing_order
+        finishing_order = []
+
+        validation_manager = ValidationManager[SpecialDataSet]()
+        validation_manager.register(
+            QueryMappedValidator(
+                validator_check_special_data_set,
+                {"x": Query().path("x").iter(iter_list).path("x"), "y": Query().path("y")},
+            ),
+        )
+        validation_summary = await validation_manager.validate(special_dataset_instance)
+        assert validation_summary.num_fails == 0
+        assert len(finishing_order) == 3
+        assert all(el == check_special_data_set for el in finishing_order)
+
+    async def test_special_data_set_errors(self):
+        global finishing_order
+        finishing_order = []
+
+        validation_manager = ValidationManager[SpecialDataSet]()
+        validation_manager.register(
+            QueryMappedValidator(
+                validator_check_special_data_set,
+                {"x": Query().path("x").iter(iter_list).path("x"), "y": Query().path("y")},
+            ),
+        )
+        validation_manager.register(
+            QueryMappedValidator(
+                validator_check_special_data_set_optional,
+                {"x": Query().path("x").iter(iter_list).path("x"), "y": Query().path("y")},
+            ),
+        )
+        validation_summary = await validation_manager.validate(SpecialDataSet.construct(x=special_dataset_instance.x))
+        assert validation_summary.num_errors_total == 1
+        assert "y not provided" in str(validation_summary.all_errors[0])
+        assert len(finishing_order) == 3
+        assert all(el == check_special_data_set_optional for el in finishing_order)

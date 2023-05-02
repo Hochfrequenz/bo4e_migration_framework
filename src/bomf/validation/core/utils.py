@@ -1,7 +1,7 @@
 """
 Contains some useful utility functions to be used in validator functions.
 """
-from typing import TYPE_CHECKING, Any, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, overload
 
 from typeguard import check_type
 
@@ -23,7 +23,17 @@ def optional_field(obj: Any, attribute_path: str, attribute_type: type[AttrT]) -
         return None
 
 
+@overload
 def required_field(obj: Any, attribute_path: str, attribute_type: type[AttrT]) -> AttrT:
+    ...
+
+
+@overload
+def required_field(obj: Any, attribute_path: str, attribute_type: Any) -> Any:
+    ...
+
+
+def required_field(obj: Any, attribute_path: str, attribute_type: Any) -> Any:
     """
     Tries to query the `obj` with the provided `attribute_path`. If it is not existent,
     an AttributeError will be raised.
