@@ -18,8 +18,9 @@ from bomf import (
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
 from bomf.provider import KeyTyp
-from bomf.validation import PathMappedValidator, Validator
+from bomf.validation import Validator
 from bomf.validation.core import SyncValidatorFunction
+from bomf.validation.path_map import PathMappedValidator
 
 _MySourceDataModel = Dict[str, str]
 _MyKeyTyp = str
