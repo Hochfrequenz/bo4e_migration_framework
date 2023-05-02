@@ -6,15 +6,22 @@ import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 from typing import Generic, Iterator, Optional
 
 import networkx as nx
+from typeguard import check_type
 
 from bomf.validation.core.analysis import ValidationResult
 from bomf.validation.core.errors import ErrorHandler, ValidationError
 from bomf.validation.core.types import DataSetT, MappedValidatorSyncAsync, SyncValidatorFunction, validation_logger
 from bomf.validation.core.validator import MappedValidator, Parameters, is_async, is_sync
+
+
+class _CustomErrorIDS(IntEnum):
+    PARAM_TYPE_MISMATCH = 5
+    ABANDON_EXEC = 2
+    PARAM_PROVIDER_ERRORED = 1
 
 
 class _ExecutionState(StrEnum):
@@ -182,10 +189,36 @@ class ValidationManager(Generic[DataSetT]):
                 RuntimeError("Errors in depending validators"),
                 current_mapped_validator,
                 self,
-                custom_error_id=2,
+                custom_error_id=_CustomErrorIDS.ABANDON_EXEC,
             )
             return True
         return False
+
+    async def _are_params_ok(
+        self, mapped_validator: MappedValidatorSyncAsync, params_or_exc: Parameters[DataSetT] | Exception
+    ) -> bool:
+        if isinstance(params_or_exc, Exception):
+            await self.info.error_handler.catch(
+                str(params_or_exc),
+                params_or_exc,
+                mapped_validator,
+                self,
+                custom_error_id=_CustomErrorIDS.PARAM_PROVIDER_ERRORED,
+            )
+            return False
+        try:
+            for param_name, param in params_or_exc.items():
+                check_type(
+                    param.param_id,
+                    param.value,
+                    mapped_validator.validator.signature.parameters[param_name].annotation,
+                )
+        except TypeError as error:
+            await self.info.error_handler.catch(
+                str(error), error, mapped_validator, self, custom_error_id=_CustomErrorIDS.PARAM_TYPE_MISMATCH
+            )
+            return False
+        return True
 
     async def _execute_async_validator(
         self,
@@ -209,11 +242,9 @@ class ValidationManager(Generic[DataSetT]):
         if await self._dependency_errored(mapped_validator):
             return
         for params_or_exc in mapped_validator.provide(self.info.data_set):
-            if isinstance(params_or_exc, Exception):
-                await self.info.error_handler.catch(
-                    str(params_or_exc), params_or_exc, mapped_validator, self, custom_error_id=1
-                )
+            if not await self._are_params_ok(mapped_validator, params_or_exc):
                 continue
+            assert isinstance(params_or_exc, Parameters)
             self.info.running_tasks[self.info.tasks[mapped_validator]].current_provided_params = params_or_exc
 
             async with self.info.error_handler.pokemon_catcher(mapped_validator, self):
@@ -245,11 +276,9 @@ class ValidationManager(Generic[DataSetT]):
             return
         execution_info = self.validators[mapped_validator]
         for params_or_exc in mapped_validator.provide(self.info.data_set):
-            if isinstance(params_or_exc, Exception):
-                await self.info.error_handler.catch(
-                    str(params_or_exc), params_or_exc, mapped_validator, self, custom_error_id=1
-                )
+            if not await self._are_params_ok(mapped_validator, params_or_exc):
                 continue
+            assert isinstance(params_or_exc, Parameters)
             self.info.current_provided_params = params_or_exc
 
             async with self.info.error_handler.pokemon_catcher(mapped_validator, self):
