@@ -35,10 +35,10 @@ class _MyIntermediateDataModel(Bo4eDataSet):
 
 
 class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
-    def get_entry(self, key: KeyTyp) -> _MySourceDataModel:
+    async def get_entry(self, key: KeyTyp) -> _MySourceDataModel:
         raise NotImplementedError("Not relevant for the test")
 
-    def get_data(self) -> List[_MySourceDataModel]:
+    async def get_data(self) -> List[_MySourceDataModel]:
         return [
             {"foo": "bar"},
             {"FOO": "BAR"},
@@ -104,7 +104,7 @@ class TestMigrationStrategy:
 
     async def test_happy_path(self):
         # here's some pre-processing, you can read some data, you can create relations, whatever
-        raw_data = _MySourceDataProvider().get_data()
+        raw_data = await _MySourceDataProvider().get_data()
         survivors = await _MyFilter().apply(raw_data)
         to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
         strategy = MyMigrationStrategy(
