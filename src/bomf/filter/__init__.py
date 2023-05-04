@@ -7,7 +7,7 @@ filters can be used to consider only those objects for a migration that meet cer
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Awaitable, Callable, Generic, List, Set, TypeVar
+from typing import Awaitable, Callable, Generic, TypeVar
 
 Candidate = TypeVar("Candidate")  #: an arbitrary but fixed type on which the filter operates
 
@@ -34,11 +34,11 @@ class Filter(ABC, Generic[Candidate]):
         """
         raise NotImplementedError("The inheriting class has to implement this method")
 
-    async def apply(self, candidates: List[Candidate]) -> List[Candidate]:
+    async def apply(self, candidates: list[Candidate]) -> list[Candidate]:
         """
         apply this filter on the candidates
         """
-        tasks: List[Awaitable[bool]] = [self.predicate(c) for c in candidates]
+        tasks: list[Awaitable[bool]] = [self.predicate(c) for c in candidates]
         self._logger.info("%s created %i predicate tasks; Awaiting them all", str(self), len(tasks))
         predicate_results = await asyncio.gather(*tasks)
         self._logger.info("%s awaited %i tasks", str(self), len(tasks))
@@ -75,7 +75,7 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         self._base_filter = base_filter
 
     @abstractmethod
-    async def aggregate(self, candidates: List[Candidate]) -> List[Aggregate]:
+    async def aggregate(self, candidates: list[Candidate]) -> list[Aggregate]:
         """
         Create aggregates which are then passed to the base filter that works on the aggregate.
         The method is async so that you can do complex (and e.g. network based) aggregations.
@@ -89,7 +89,7 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         """
         raise NotImplementedError("The inheriting class has to implement this method")
 
-    async def apply(self, candidates: List[Candidate]) -> List[Candidate]:
+    async def apply(self, candidates: list[Candidate]) -> list[Candidate]:
         """
         If aggregate and disaggregate and the base_filter are properly setup, then apply will filter the list of
         candidates based on the aggregate base filter.
@@ -109,7 +109,7 @@ class HardcodedFilter(Filter[Candidate], ABC, Generic[Candidate, CandidateProper
     a harcoded filter filters on a hardcoded list of allowed/blocked values (formerly known as white- and blacklist)
     """
 
-    def __init__(self, criteria_selector: Callable[[Candidate], CandidateProperty], values: Set[CandidateProperty]):
+    def __init__(self, criteria_selector: Callable[[Candidate], CandidateProperty], values: set[CandidateProperty]):
         """
         instantiate by providing a criteria selector that returns a property on which we can filter and a set of values.
         Whether the values are used as allowed or not allowed (block) depends on the inheriting class

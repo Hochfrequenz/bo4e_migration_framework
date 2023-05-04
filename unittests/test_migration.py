@@ -1,10 +1,7 @@
 """
 Tests the overall data flow using bomf.
 """
-import asyncio
-from typing import Dict, List, Optional
-
-import attrs
+from typing import Optional
 
 from bomf import (
     Bo4eDataSetToTargetMapper,
@@ -22,13 +19,13 @@ from bomf.validation import Validator
 from bomf.validation.core import SyncValidatorFunction
 from bomf.validation.path_map import PathMappedValidator
 
-_MySourceDataModel = Dict[str, str]
+_MySourceDataModel = dict[str, str]
 _MyKeyTyp = str
-_MyTargetDataModel = List[str]
+_MyTargetDataModel = list[str]
 
 
 class _MyIntermediateDataModel(Bo4eDataSet):
-    data: Dict[str, str]
+    data: dict[str, str]
 
     def get_id(self) -> str:
         return "12345"
@@ -38,7 +35,7 @@ class _MySourceDataProvider(SourceDataProvider[_MySourceDataModel, _MyKeyTyp]):
     async def get_entry(self, key: KeyTyp) -> _MySourceDataModel:
         raise NotImplementedError("Not relevant for the test")
 
-    async def get_data(self) -> List[_MySourceDataModel]:
+    async def get_data(self) -> list[_MySourceDataModel]:
         return [
             {"foo": "bar"},
             {"FOO": "BAR"},
@@ -54,11 +51,11 @@ class _MyFilter(Filter[_MySourceDataModel]):
 
 
 class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
-    def __init__(self, what_ever_you_like: List[_MySourceDataModel]):
+    def __init__(self, what_ever_you_like: list[_MySourceDataModel]):
         # what_ever_you_like is a place holde for all the relation magic that may happen
         self._source_models = what_ever_you_like
 
-    async def create_data_sets(self) -> List[_MyIntermediateDataModel]:
+    async def create_data_sets(self) -> list[_MyIntermediateDataModel]:
         return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 

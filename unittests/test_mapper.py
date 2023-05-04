@@ -1,4 +1,4 @@
-from typing import List, Optional, Type
+from typing import Optional, Type
 
 import attrs
 import pytest  # type:ignore[import]
@@ -38,7 +38,7 @@ class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
 
 
 class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
-    async def create_data_sets(self) -> List[_MaLoAndMeLo]:
+    async def create_data_sets(self) -> list[_MaLoAndMeLo]:
         return [
             _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id=source["meloId"]),
@@ -49,7 +49,7 @@ class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
 
 
 class _MaLoMeLoToListMapper(Bo4eDataSetToTargetMapper):
-    async def create_target_model(self, dataset: _MaLoAndMeLo) -> List[str]:
+    async def create_target_model(self, dataset: _MaLoAndMeLo) -> list[str]:
         return [
             dataset.get_business_object(Marktlokation).marktlokations_id,
             dataset.get_business_object(Messlokation).messlokations_id,

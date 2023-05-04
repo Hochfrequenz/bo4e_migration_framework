@@ -1,7 +1,6 @@
 import dataclasses
 import logging
 from itertools import groupby
-from typing import List
 
 import pytest  # type:ignore[import]
 
@@ -26,7 +25,7 @@ class TestFilter:
             ),
         ],
     )
-    async def test_filter(self, filter_under_test: Filter, candidates: List[dict], survivors: List[dict], caplog):
+    async def test_filter(self, filter_under_test: Filter, candidates: list[dict], survivors: list[dict], caplog):
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         actual = await filter_under_test.apply(candidates)
         assert actual == survivors
@@ -61,8 +60,8 @@ class _BarFilter(AggregateFilter):
         base_filter = _BaseFilter()
         super(_BarFilter, self).__init__(base_filter)
 
-    async def aggregate(self, candidates: List[_MyCandidate]) -> List[_MyAggregate]:
-        result: List[_MyAggregate] = []
+    async def aggregate(self, candidates: list[_MyCandidate]) -> list[_MyAggregate]:
+        result: list[_MyAggregate] = []
         for group_key, group in groupby(sorted(candidates, key=lambda c: c.string), lambda c: c.string):
             group_items = list(group)
             max_number_in_group = max(group_item.number for group_item in group_items)
@@ -93,7 +92,7 @@ class TestAggregateFilter:
         ],
     )
     async def test_aggregate_filter(
-        self, filter_under_test: AggregateFilter, candidates: List[dict], survivors: List[dict], caplog
+        self, filter_under_test: AggregateFilter, candidates: list[dict], survivors: list[dict], caplog
     ):
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         actual = await filter_under_test.apply(candidates)
@@ -105,14 +104,14 @@ class TestAggregateFilter:
 class TestBlockAndAllowlistFilter:
     async def test_allowlist_filter(self):
         allowlist = {"A", "B", "C"}
-        candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        candidates: list[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
         allowlist_filter: AllowlistFilter[dict[str, str], str] = AllowlistFilter(lambda c: c["foo"], allowlist)
         actual = await allowlist_filter.apply(candidates)
         assert actual == [{"foo": "A"}, {"foo": "B"}]
 
     async def test_blocklist_filter(self):
         blocklist = {"A", "B", "C"}
-        candidates: List[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
+        candidates: list[dict[str, str]] = [{"foo": "A"}, {"foo": "B"}, {"foo": "Z"}]
         blocklist_filter: BlocklistFilter[dict[str, str], str] = BlocklistFilter(lambda c: c["foo"], blocklist)
         actual = await blocklist_filter.apply(candidates)
         assert actual == [{"foo": "Z"}]
@@ -137,8 +136,8 @@ class TestSourceDataProviderFilter:
     async def test_source_data_provider_filter(
         self,
         candidate_filter: Filter[_MyCandidate],
-        candidates: List[_MyCandidate],
-        survivors: List[_MyCandidate],
+        candidates: list[_MyCandidate],
+        survivors: list[_MyCandidate],
         caplog,
     ):
         my_provider: ListBasedSourceDataProvider[_MyCandidate, int] = ListBasedSourceDataProvider(

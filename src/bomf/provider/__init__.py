@@ -6,7 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from itertools import groupby
 from pathlib import Path
-from typing import Callable, Generic, List, Mapping, Optional, Protocol, TypeVar, Union
+from typing import Callable, Generic, Mapping, TypeVar, Union
 
 SourceDataModel = TypeVar("SourceDataModel")
 """
@@ -27,7 +27,7 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
     """
 
     @abstractmethod
-    async def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> list[SourceDataModel]:
         """
         Returns all available entities from the source data model.
         They will be filtered in a SourceDataModel Filter ("Preselect")
@@ -46,11 +46,11 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
     A source data provider that is instantiated with a list of source data models
     """
 
-    def __init__(self, source_data_models: List[SourceDataModel], key_selector: Callable[[SourceDataModel], KeyTyp]):
+    def __init__(self, source_data_models: list[SourceDataModel], key_selector: Callable[[SourceDataModel], KeyTyp]):
         """
         instantiate it by providing a list of source data models
         """
-        self._models: List[SourceDataModel] = source_data_models
+        self._models: list[SourceDataModel] = source_data_models
         logger = logging.getLogger(self.__module__)
         for key, key_models in groupby(source_data_models, key=key_selector):
             affected_entries_count = len(list(key_models))
@@ -69,7 +69,7 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
     async def get_entry(self, key: KeyTyp) -> SourceDataModel:
         return self._models_dict[key]
 
-    async def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> list[SourceDataModel]:
         return self._models
 
 
@@ -81,7 +81,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
     def __init__(
         self,
         json_file_path: Path,
-        data_selector: Callable[[Union[dict, list]], List[SourceDataModel]],
+        data_selector: Callable[[Union[dict, list]], list[SourceDataModel]],
         key_selector: Callable[[SourceDataModel], KeyTyp],
         encoding="utf-8",
     ):
@@ -91,13 +91,13 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
         """
         with open(json_file_path, "r", encoding=encoding) as json_file:
             raw_data = json.load(json_file)
-        self._source_data_models: List[SourceDataModel] = data_selector(raw_data)
+        self._source_data_models: list[SourceDataModel] = data_selector(raw_data)
         self._key_to_data_model_mapping: Mapping[KeyTyp, SourceDataModel] = {
             key_selector(sdm): sdm for sdm in self._source_data_models
         }
         self.key_selector = key_selector
 
-    async def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> list[SourceDataModel]:
         return self._source_data_models
 
     async def get_entry(self, key: KeyTyp) -> SourceDataModel:

@@ -2,7 +2,7 @@
 BOMF stands for BO4E Migration Framework.
 """
 from abc import ABC
-from typing import Generic, List
+from typing import Generic
 
 import attrs
 
@@ -37,7 +37,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     The target loader moves the target entities into the actual target system.
     """
 
-    async def migrate(self) -> List[LoadingSummary]:
+    async def migrate(self) -> list[LoadingSummary]:
         """
         run the entire migration flow from source to target which includes:
         1. create bo4e data source using the source_data_set_to_bo4e_mapper
