@@ -4,7 +4,6 @@ from datetime import timedelta
 from typing import Any, Iterator, Optional
 
 import pytest
-from frozendict import frozendict
 from pydantic import BaseModel, Required
 
 from bomf import ValidationManager

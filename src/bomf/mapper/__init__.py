@@ -3,7 +3,7 @@ mappers convert from source data model to BO4E and from BO4E to a target data mo
 """
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Generic, List, TypeVar
+from typing import Generic, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -29,7 +29,7 @@ class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     # the only thing it has to provide is a method to create_data_sets (in bo4e).
     # we don't care from where it gets them in the first place
 
-    async def create_data_sets(self) -> List[IntermediateDataSet]:
+    async def create_data_sets(self) -> list[IntermediateDataSet]:
         """
         apply the mapping to all the provided source data sets.
 
@@ -49,7 +49,7 @@ class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSe
         maps the given source data model into an intermediate data set
         """
 
-    async def create_target_models(self, datasets: List[IntermediateDataSet]) -> List[TargetDataModel]:
+    async def create_target_models(self, datasets: list[IntermediateDataSet]) -> list[TargetDataModel]:
         """
         apply the mapping to all the provided dataset
         """

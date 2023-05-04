@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import List
 
 import pytest  # type:ignore[import]
 
@@ -15,7 +14,7 @@ class LegacyDataSystemDataProvider(SourceDataProvider):
     async def get_entry(self, key: KeyTyp) -> str:
         raise NotImplementedError("Not relevant for this test")
 
-    async def get_data(self) -> List[str]:
+    async def get_data(self) -> list[str]:
         return ["foo", "bar", "baz"]
 
 

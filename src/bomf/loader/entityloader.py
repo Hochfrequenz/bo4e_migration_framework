@@ -6,7 +6,7 @@ import json
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Awaitable, Callable, Generic, List, Optional, TypeVar
+from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 import attrs
 from pydantic import BaseModel  # pylint:disable=no-name-in-module
@@ -131,12 +131,12 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
             loading_error=None,
         )
 
-    async def load_entities(self, entities: List[_TargetEntity]) -> List[LoadingSummary]:
+    async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
         """
         load all the given entities into the target system
         """
         # here we could use some error handling in the future
-        tasks: List[Awaitable[LoadingSummary]] = [self.load(entity) for entity in entities]
+        tasks: list[Awaitable[LoadingSummary]] = [self.load(entity) for entity in entities]
         result = await asyncio.gather(*tasks)
         return result
 
@@ -149,17 +149,17 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
     async def verify(self, entity: _TargetEntity, id_in_target_system: Optional[str] = None) -> bool:
         return True
 
-    def __init__(self, file_path: Path, list_encoder: Callable[[List[_TargetEntity]], List[dict]]):
+    def __init__(self, file_path: Path, list_encoder: Callable[[list[_TargetEntity]], list[dict]]):
         """provide a path to a json file (will be created if not exists and overwritten if exists)"""
         self._file_path = file_path
         self._list_encoder = list_encoder
-        self._entities: List[_TargetEntity] = []
+        self._entities: list[_TargetEntity] = []
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
         self._entities.append(entity)
         return None
 
-    async def load_entities(self, entities: List[_TargetEntity]) -> List[LoadingSummary]:
+    async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
         base_result = await super().load_entities(entities)
         dict_list = self._list_encoder(self._entities)
         with open(self._file_path, "w+", encoding="utf-8") as outfile:
@@ -174,7 +174,7 @@ _PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
 class _ListOfPydanticModels(BaseModel, Generic[_PydanticTargetModel]):
     # https://stackoverflow.com/a/58641115/10009545
     # for the instantiation see the serialization unit test
-    __root__: List[_PydanticTargetModel]
+    __root__: list[_PydanticTargetModel]
 
 
 class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
