@@ -148,7 +148,7 @@ class TestSourceDataProviderFilter:
         caplog.set_level(logging.DEBUG, logger=self.__module__)
         filtered_provider = await sdp_filter.apply(my_provider)
         assert isinstance(filtered_provider, SourceDataProvider)
-        actual = filtered_provider.get_data()
+        actual = await filtered_provider.get_data()
         assert actual == survivors
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
         assert "There are 2 filtered aggregates left" in caplog.messages

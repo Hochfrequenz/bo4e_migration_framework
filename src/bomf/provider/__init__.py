@@ -27,14 +27,14 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
     """
 
     @abstractmethod
-    def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> List[SourceDataModel]:
         """
         Returns all available entities from the source data model.
         They will be filtered in a SourceDataModel Filter ("Preselect")
         """
 
     @abstractmethod
-    def get_entry(self, key: KeyTyp) -> SourceDataModel:
+    async def get_entry(self, key: KeyTyp) -> SourceDataModel:
         """
         returns the source data model which has key as key.
         raises an error if the key is unknown
@@ -66,10 +66,10 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
         )
         self.key_selector = key_selector
 
-    def get_entry(self, key: KeyTyp) -> SourceDataModel:
+    async def get_entry(self, key: KeyTyp) -> SourceDataModel:
         return self._models_dict[key]
 
-    def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> List[SourceDataModel]:
         return self._models
 
 
@@ -97,8 +97,8 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
         }
         self.key_selector = key_selector
 
-    def get_data(self) -> List[SourceDataModel]:
+    async def get_data(self) -> List[SourceDataModel]:
         return self._source_data_models
 
-    def get_entry(self, key: KeyTyp) -> SourceDataModel:
+    async def get_entry(self, key: KeyTyp) -> SourceDataModel:
         return self._key_to_data_model_mapping[key]
