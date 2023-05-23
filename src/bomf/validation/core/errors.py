@@ -134,6 +134,8 @@ class ValidationError(RuntimeError):
         self.mapped_validator = mapped_validator
         self.validator_set = validation_manager
         self.error_id = error_id
+        self.message_detail = message_detail
+        self.provided_params = provided_params
 
 
 # pylint: disable=too-few-public-methods
