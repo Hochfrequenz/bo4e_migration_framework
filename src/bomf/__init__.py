@@ -2,7 +2,7 @@
 BOMF stands for BO4E Migration Framework.
 """
 from abc import ABC
-from typing import Generic
+from typing import Generic, Optional
 
 import attrs
 
@@ -24,9 +24,9 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     """
     A mapper that transforms source data models into data sets that consist of bo4e objects
     """
-    validation: ValidationManager[IntermediateDataSet]
+    validation: Optional[ValidationManager[IntermediateDataSet]]
     """
-    a set of validation rules that are applied to the bo4e data sets
+    a set of validation rules that are applied to the bo4e data sets. It can be None e.g. for testing purposes.
     """
     bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet]
     """
@@ -47,9 +47,9 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         # todo: here we should add some logging and statistics stuff
         bo4e_datasets = await self.source_data_set_to_bo4e_mapper.create_data_sets()
-        validation_result = await self.validation.validate(*bo4e_datasets)
-        target_data_models = await self.bo4e_to_target_mapper.create_target_models(
-            validation_result.succeeded_data_sets
-        )
+        if self.validation is not None:
+            validation_result = await self.validation.validate(*bo4e_datasets)
+            bo4e_datasets = validation_result.succeeded_data_sets
+        target_data_models = await self.bo4e_to_target_mapper.create_target_models(bo4e_datasets)
         loading_summaries = await self.target_loader.load_entities(target_data_models)
         return loading_summaries
