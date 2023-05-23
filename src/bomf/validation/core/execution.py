@@ -326,7 +326,7 @@ class ValidationManager(Generic[DataSetT]):
                 self.info.tasks[mapped_validator] = self.info.current_task
                 await self._execute_sync_validator(mapped_validator)
 
-    async def validate(self, *data_sets: DataSetT) -> ValidationResult[DataSetT]:
+    async def validate(self, *data_sets: DataSetT, log_summary: bool = False) -> ValidationResult[DataSetT]:
         """
         Validates each of the provided data set instances onto the registered validators.
         Any errors occurring during validation will be collected the validation process will not be cancelled.
@@ -355,4 +355,13 @@ class ValidationManager(Generic[DataSetT]):
             else:
                 await self._execute_validators(validator_execution_order)
 
-        return ValidationResult(self, error_handlers)
+        validation_result = ValidationResult(self, error_handlers)
+        if log_summary:
+            validation_logger.info(
+                "Validation Summary: %i succeeded, %i failed, %i errors. %s",
+                validation_result.num_succeeds,
+                validation_result.num_fails,
+                validation_result.num_errors_total,
+                str(validation_result.num_errors_per_id),
+            )
+        return validation_result
