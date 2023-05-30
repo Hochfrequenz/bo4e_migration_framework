@@ -176,6 +176,9 @@ class _ListOfPydanticModels(BaseModel, Generic[_PydanticTargetModel]):
     # for the instantiation see the serialization unit test
     __root__: list[_PydanticTargetModel]
 
+    class Config:
+        allow_population_by_field_name = True
+
 
 class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
     """
