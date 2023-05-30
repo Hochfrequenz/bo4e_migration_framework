@@ -185,5 +185,5 @@ class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], G
     def __init__(self, file_path: Path):
         """provide a file path"""
         super().__init__(
-            file_path=file_path, list_encoder=lambda x: json.loads(_ListOfPydanticModels(__root__=x).json())
+            file_path=file_path, list_encoder=lambda x: json.loads(_ListOfPydanticModels(__root__=x).json(by_alias=True))
         )
