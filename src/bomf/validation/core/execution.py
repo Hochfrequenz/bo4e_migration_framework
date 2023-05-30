@@ -207,6 +207,7 @@ class ValidationManager(Generic[DataSetT]):
             )
             return False
         try:
+            self.info.current_provided_params = params_or_exc
             for param_name, param in params_or_exc.items():
                 check_type(
                     param.param_id,
@@ -245,7 +246,6 @@ class ValidationManager(Generic[DataSetT]):
             if not await self._are_params_ok(mapped_validator, params_or_exc):
                 continue
             assert isinstance(params_or_exc, Parameters)
-            self.info.running_tasks[self.info.tasks[mapped_validator]].current_provided_params = params_or_exc
 
             async with self.info.error_handler.pokemon_catcher(mapped_validator, self):
                 if self.validators[mapped_validator].timeout is not None:
@@ -279,7 +279,6 @@ class ValidationManager(Generic[DataSetT]):
             if not await self._are_params_ok(mapped_validator, params_or_exc):
                 continue
             assert isinstance(params_or_exc, Parameters)
-            self.info.current_provided_params = params_or_exc
 
             async with self.info.error_handler.pokemon_catcher(mapped_validator, self):
                 if execution_info.timeout is not None:
