@@ -83,7 +83,7 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
         return self._models
 
     async def get_paginated_data(self, offset: int, limit: int) -> list[SourceDataModel]:
-        if offset > len(self._source_data_models):
+        if offset > len(self._models):
             return []
         return self._models[offset : offset + limit]
 
