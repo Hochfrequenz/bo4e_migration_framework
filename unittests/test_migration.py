@@ -129,6 +129,6 @@ class TestMigrationStrategy:
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
         )
-        result = await strategy.migrate_paginated(1)
+        result = await strategy.migrate_paginated(1)  # the chunk_size arg here is the only difference to the other test
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)
