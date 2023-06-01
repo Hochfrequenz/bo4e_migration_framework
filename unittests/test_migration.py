@@ -55,7 +55,11 @@ class _MyToBo4eMapper(SourceToBo4eDataSetMapper[_MyIntermediateDataModel]):
         # what_ever_you_like is a place holde for all the relation magic that may happen
         self._source_models = what_ever_you_like
 
-    async def create_data_sets(self) -> list[_MyIntermediateDataModel]:
+    async def create_data_sets(
+        self, offset: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[_MyIntermediateDataModel]:
+        if offset is not None and limit is not None:
+            return [_MyIntermediateDataModel(data=source) for source in self._source_models[offset : offset + limit]]
         return [_MyIntermediateDataModel(data=source) for source in self._source_models]
 
 
@@ -111,5 +115,20 @@ class TestMigrationStrategy:
             target_loader=_MyTargetLoader(),
         )
         result = await strategy.migrate()
+        assert result is not None
+        assert len(result) == 3  # = source models -1(filter) -1(validation)
+
+    async def test_happy_path_paginated(self):
+        # here's some pre-processing, you can read some data, you can create relations, whatever
+        raw_data = await _MySourceDataProvider().get_data()
+        survivors = await _MyFilter().apply(raw_data)
+        to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
+        strategy = MyMigrationStrategy(
+            source_data_to_bo4e_mapper=to_bo4e_mapper,
+            validation=_my_validation,
+            bo4e_to_target_mapper=_MyToTargetMapper(),
+            target_loader=_MyTargetLoader(),
+        )
+        result = await strategy.migrate_paginated(1)  # the chunk_size arg here is the only difference to the other test
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)

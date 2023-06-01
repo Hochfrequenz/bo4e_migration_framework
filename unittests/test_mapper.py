@@ -5,7 +5,7 @@ import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
 
-from bomf.mapper import Bo4eDataSetToTargetMapper, SourceToBo4eDataSetMapper
+from bomf.mapper import Bo4eDataSetToTargetMapper, PaginationNotSupportedException, SourceToBo4eDataSetMapper
 from bomf.model import Bo4eTyp
 
 
@@ -38,7 +38,9 @@ class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
 
 
 class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
-    async def create_data_sets(self) -> list[_MaLoAndMeLo]:
+    async def create_data_sets(self, offset: Optional[int] = None, limit: Optional[int] = None) -> list[_MaLoAndMeLo]:
+        if limit is not None or offset is not None:
+            raise PaginationNotSupportedException()
         return [
             _MaLoAndMeLo(
                 melo=Messlokation.construct(messlokations_id=source["meloId"]),

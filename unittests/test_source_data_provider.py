@@ -36,6 +36,14 @@ class TestSourceDataProvider:
             {"myKey": "hello", "asd": "fgh"},
             {"myKey": "world", "qwe": "rtz"},
         ]
+        assert await example_json_data_provider.get_paginated_data(offset=0, limit=0) == []
+        assert await example_json_data_provider.get_paginated_data(offset=1, limit=1) == [
+            {"myKey": "world", "qwe": "rtz"}
+        ]
+        assert await example_json_data_provider.get_paginated_data(offset=1, limit=10) == [
+            {"myKey": "world", "qwe": "rtz"}
+        ]
+        assert await example_json_data_provider.get_paginated_data(offset=2, limit=10) == []
         assert await example_json_data_provider.get_entry("world") == {"myKey": "world", "qwe": "rtz"}
         with pytest.raises(KeyError):
             _ = await example_json_data_provider.get_entry("something unknown")
@@ -46,6 +54,11 @@ class TestListBasedSourceDataProvider:
         caplog.set_level(logging.DEBUG, logger=ListBasedSourceDataProvider.__module__)
         my_provider = ListBasedSourceDataProvider(["foo", "bar", "baz"], key_selector=lambda x: x)
         assert len(await my_provider.get_data()) == 3
+        assert len(await my_provider.get_paginated_data(offset=0, limit=0)) == 0
+        assert len(await my_provider.get_paginated_data(offset=0, limit=3)) == 3
+        assert len(await my_provider.get_paginated_data(offset=0, limit=30)) == 3
+        assert len(await my_provider.get_paginated_data(offset=1, limit=30)) == 2
+        assert len(await my_provider.get_paginated_data(offset=3, limit=30)) == 0
         assert await my_provider.get_entry("bar") == "bar"
         assert "Read 3 records from ['foo', 'bar', 'baz']" in caplog.messages
 

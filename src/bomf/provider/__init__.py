@@ -8,6 +8,8 @@ from itertools import groupby
 from pathlib import Path
 from typing import Callable, Generic, Mapping, TypeVar, Union
 
+from bomf import PaginationNotSupportedException
+
 SourceDataModel = TypeVar("SourceDataModel")
 """
 Source data model is the data model of the source (meaning: the data model of the system from which the data originate).
@@ -32,6 +34,14 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
         Returns all available entities from the source data model.
         They will be filtered in a SourceDataModel Filter ("Preselect")
         """
+
+    async def get_paginated_data(self, offset: int, limit: int) -> list[SourceDataModel]:
+        """
+        Returns source data models in the range [offset, offset+limit]
+        """
+        # This method is not abstract, meaning: the inheriting classes do not have to implement it.
+        # It raises an error by default which is ok.
+        raise PaginationNotSupportedException(f"The source data provider {self.__class__} does not support pagination")
 
     @abstractmethod
     async def get_entry(self, key: KeyTyp) -> SourceDataModel:
@@ -72,6 +82,11 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
     async def get_data(self) -> list[SourceDataModel]:
         return self._models
 
+    async def get_paginated_data(self, offset: int, limit: int) -> list[SourceDataModel]:
+        if offset > len(self._models):
+            return []
+        return self._models[offset : offset + limit]
+
 
 class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Generic[SourceDataModel, KeyTyp]):
     """
@@ -99,6 +114,11 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
 
     async def get_data(self) -> list[SourceDataModel]:
         return self._source_data_models
+
+    async def get_paginated_data(self, offset: int, limit: int) -> list[SourceDataModel]:
+        if offset > len(self._source_data_models):
+            return []
+        return self._source_data_models[offset : offset + limit]
 
     async def get_entry(self, key: KeyTyp) -> SourceDataModel:
         return self._key_to_data_model_mapping[key]

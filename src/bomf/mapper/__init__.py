@@ -3,7 +3,7 @@ mappers convert from source data model to BO4E and from BO4E to a target data mo
 """
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -19,6 +19,12 @@ It is based on BO4E.
 """
 
 
+class PaginationNotSupportedException(NotImplementedError):
+    """
+    an exception that indicates, that paginating the data sets is not support at the moment
+    """
+
+
 # pylint:disable=too-few-public-methods
 class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     """
@@ -29,10 +35,14 @@ class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     # the only thing it has to provide is a method to create_data_sets (in bo4e).
     # we don't care from where it gets them in the first place
 
-    async def create_data_sets(self) -> list[IntermediateDataSet]:
+    async def create_data_sets(
+        self, offset: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[IntermediateDataSet]:
         """
-        apply the mapping to all the provided source data sets.
-
+        Apply the mapping to all the provided source data sets.
+        If an offset and limit are provided (not None), then the implementing method should
+        * either raise a PaginationNotSupportedException
+        * or return max limit items starting from offset
         """
         raise NotImplementedError("The inheriting class has to implement this method")
 
