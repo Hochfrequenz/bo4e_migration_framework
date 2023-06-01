@@ -90,6 +90,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                     "got an unexpected keyword argument 'limit'" in error_message
                     or "got an unexpected keyword argument 'offset'" in error_message
                 ):
+                    # this case should be prevented by the type checker already
                     raise PaginationNotSupportedException() from type_error
                 raise
             if len(bo4e_datasets) == 0:
