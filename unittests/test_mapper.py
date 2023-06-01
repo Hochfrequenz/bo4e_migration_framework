@@ -38,7 +38,7 @@ class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
 
 
 class _DictToMaLoMeLoMapper(SourceToBo4eDataSetMapper):
-    async def create_data_sets(self, limit: Optional[int] = None, offset: Optional[int] = None) -> list[_MaLoAndMeLo]:
+    async def create_data_sets(self, offset: Optional[int] = None, limit: Optional[int] = None) -> list[_MaLoAndMeLo]:
         if limit is not None or offset is not None:
             raise PaginationNotSupportedException()
         return [
