@@ -20,7 +20,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
-    source_data_set_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet]
+    source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet]
     """
     A mapper that transforms source data models into data sets that consist of bo4e objects
     """
@@ -46,7 +46,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         4. loading the target data models into the target system.
         """
         # todo: here we should add some logging and statistics stuff
-        bo4e_datasets = await self.source_data_set_to_bo4e_mapper.create_data_sets()
+        bo4e_datasets = await self.source_data_to_bo4e_mapper.create_data_sets()
         validation_result = await self.validation.validate(*bo4e_datasets)
         target_data_models = await self.bo4e_to_target_mapper.create_target_models(
             validation_result.succeeded_data_sets
