@@ -2,6 +2,7 @@
 BOMF stands for BO4E Migration Framework.
 """
 import asyncio
+import logging
 from abc import ABC
 from typing import Generic
 
@@ -21,6 +22,12 @@ from bomf.validation import ValidationManager
 
 
 # pylint:disable=too-few-public-methods
+def _get_success_failure_count(summaries: list[LoadingSummary]) -> tuple[int, int]:
+    success_count = sum(1 for x in summaries if x.was_loaded_successfully)
+    failure_count = sum(1 for x in summaries if not x.was_loaded_successfully)
+    return success_count, failure_count
+
+
 @attrs.define(kw_only=True, auto_attribs=True)
 class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     """
@@ -52,11 +59,25 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         3. load to target system.
         They have been encapsulated because they're used by both the migrate and migrate_paginated methods.
         """
-        validation_result = await self.validation.validate(*bo4e_datasets)
-        target_data_models = await self.bo4e_to_target_mapper.create_target_models(
-            validation_result.succeeded_data_sets
-        )
+        logger = logging.getLogger(self.__class__.__name__)
+        if hasattr(self, "validation") and self.validation is not None:
+            logger.info("Applying validation rules to %i bo4e data sets", len(bo4e_datasets))
+            validation_result = await self.validation.validate(*bo4e_datasets)
+            logger.info(
+                "Creating target models from those %i datasets that passed the validation",
+                len(validation_result.succeeded_data_sets),
+            )
+            target_data_models = await self.bo4e_to_target_mapper.create_target_models(
+                validation_result.succeeded_data_sets
+            )
+        else:
+            logger.warning("No validation set; skipping validation")
+            logger.info("Creating target models from all %i datasets", len(bo4e_datasets))
+            target_data_models = await self.bo4e_to_target_mapper.create_target_models(bo4e_datasets)
+        logger.info("Loading %i target models into target system", len(target_data_models))
         loading_summaries = await self.target_loader.load_entities(target_data_models)
+        success_count, failure_count = _get_success_failure_count(loading_summaries)
+        logger.info("Loaded %i entities successfully, %i failed", success_count, failure_count)
         return loading_summaries
 
     async def migrate(self) -> list[LoadingSummary]:
@@ -68,6 +89,8 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         4. loading the target data models into the target system.
         """
         # todo: here we should add some logging and statistics stuff
+        logger = logging.getLogger(self.__class__.__name__)
+        logger.info("Starting migration %s (w/o pagination)", self.__class__.__name__)
         bo4e_datasets = await self.source_data_to_bo4e_mapper.create_data_sets()
         loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
         return loading_summaries
@@ -77,9 +100,12 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         This is similar to migrate, but it loads the data in chunks of chunk_size.
         Therefore, the source_data_to_bo4e_mapper must support pagination.
         """
+        logger = logging.getLogger(self.__class__.__name__)
+        logger.info("Starting migration %s (with page size %i)", self.__class__.__name__, chunk_size)
         offset = 0
         loading_summaries = []
         while True:
+            logger.info("Processing offset=%i, limit=%i", offset, chunk_size)
             try:
                 bo4e_datasets = await self.source_data_to_bo4e_mapper.create_data_sets(
                     limit=chunk_size, offset=offset
@@ -93,11 +119,19 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                     # this case should be prevented by the type checker already
                     raise PaginationNotSupportedException() from type_error
                 raise
+            logger.debug("Received %i datasets (limit was %i)", len(bo4e_datasets), chunk_size)
             if len(bo4e_datasets) == 0:
+                logger.info("Received no more datasets; Stopping")
                 break
             chunk_loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
             loading_summaries.extend(chunk_loading_summaries)
             await asyncio.sleep(1)  # give the system 1s some time to breathe
             offset += chunk_size
-
+        success_count, failure_count = _get_success_failure_count(loading_summaries)
+        logger.info(
+            "Finished paginated migration. In total we loaded %i entities out of which %i succeeded and %i failed",
+            len(loading_summaries),
+            success_count,
+            failure_count,
+        )
         return loading_summaries
