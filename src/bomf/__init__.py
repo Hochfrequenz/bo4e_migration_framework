@@ -96,7 +96,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                 break
             chunk_loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
             loading_summaries.extend(chunk_loading_summaries)
-            await asyncio.sleep(1)  #: give the system some time to breathe
+            await asyncio.sleep(1)  #:give the system 1s some time to breathe
             offset += chunk_size
 
         return loading_summaries
