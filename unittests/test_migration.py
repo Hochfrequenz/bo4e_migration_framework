@@ -105,7 +105,7 @@ class TestMigrationStrategy:
         survivors = await _MyFilter().apply(raw_data)
         to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
         strategy = MyMigrationStrategy(
-            source_data_set_to_bo4e_mapper=to_bo4e_mapper,
+            source_data_to_bo4e_mapper=to_bo4e_mapper,
             validation=_my_validation,
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
