@@ -54,7 +54,6 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
         """
         close the session of the loader, by default (no override) does nothing
         """
-        pass
 
 
 class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):

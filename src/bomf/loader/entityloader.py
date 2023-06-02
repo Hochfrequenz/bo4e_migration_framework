@@ -99,7 +99,6 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
         """
         close the session of the loader, by default (no override) does nothing
         """
-        pass
 
     async def load(self, entity: _TargetEntity) -> LoadingSummary:
         """
