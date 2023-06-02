@@ -153,8 +153,8 @@ class TestMigrationStrategy:
         def _inject_for_migration_strategy_dummy(binder: Binder):
             binder.bind(SourceToBo4eDataSetMapper, to=Mock(SourceToBo4eDataSetMapper))
             binder.bind(ValidationManager, to=Mock(ValidationManager))
-            binder.bind(Bo4eDataSetToTargetMapper, to=Mock(Bo4eDataSetToTargetMapper))
-            binder.bind(EntityLoader, to=Mock(EntityLoader))
+            binder.bind(Bo4eDataSetToTargetMapper, to=Mock(Bo4eDataSetToTargetMapper))  # type: ignore[type-abstract]
+            binder.bind(EntityLoader, to=Mock(EntityLoader))  # type: ignore[type-abstract]
 
         injector = Injector(_inject_for_migration_strategy)
         injector_dummy = Injector(_inject_for_migration_strategy_dummy)
