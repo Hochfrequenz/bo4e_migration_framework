@@ -60,6 +60,10 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         The target loader moves the target entities into the actual target system.
         """
+        self.logger = logging.getLogger(self.__class__.__name__)
+        """
+        Class logger
+        """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
         """
