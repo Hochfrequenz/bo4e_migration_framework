@@ -5,3 +5,4 @@ typeguard
 frozendict
 bidict
 networkx
+injector

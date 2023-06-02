@@ -4,9 +4,10 @@ BOMF stands for BO4E Migration Framework.
 import asyncio
 import logging
 from abc import ABC
-from typing import Generic
+from typing import Generic, Optional
 
 import attrs
+from injector import inject
 
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
@@ -28,28 +29,35 @@ def _get_success_failure_count(summaries: list[LoadingSummary]) -> tuple[int, in
     return success_count, failure_count
 
 
-@attrs.define(kw_only=True, auto_attribs=True)
 class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     """
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
-    source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet]
-    """
-    A mapper that transforms source data models into data sets that consist of bo4e objects
-    """
-    validation: ValidationManager[IntermediateDataSet]
-    """
-    a set of validation rules that are applied to the bo4e data sets
-    """
-    bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet]
-    """
-    a mapper that transforms bo4e data sets to a structure that suits the target system
-    """
-    target_loader: EntityLoader[TargetDataModel]
-    """
-    The target loader moves the target entities into the actual target system.
-    """
+    @inject
+    def __init__(
+        self,
+        source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet],
+        bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet],
+        target_loader: EntityLoader[TargetDataModel],
+        validation_manager: Optional[ValidationManager[IntermediateDataSet]] = None,
+    ):
+        self.source_data_to_bo4e_mapper = source_data_to_bo4e_mapper
+        """
+        A mapper that transforms source data models into data sets that consist of bo4e objects
+        """
+        self.validation_manager = validation_manager
+        """
+        a set of validation rules that are applied to the bo4e data sets
+        """
+        self.bo4e_to_target_mapper = bo4e_to_target_mapper
+        """
+        a mapper that transforms bo4e data sets to a structure that suits the target system
+        """
+        self.target_loader = target_loader
+        """
+        The target loader moves the target entities into the actual target system.
+        """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
         """
@@ -60,9 +68,9 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         They have been encapsulated because they're used by both the migrate and migrate_paginated methods.
         """
         logger = logging.getLogger(self.__class__.__name__)
-        if hasattr(self, "validation") and self.validation is not None:
+        if self.validation_manager is not None:
             logger.info("Applying validation rules to %i bo4e data sets", len(bo4e_datasets))
-            validation_result = await self.validation.validate(*bo4e_datasets)
+            validation_result = await self.validation_manager.validate(*bo4e_datasets)
             logger.info(
                 "Creating target models from those %i datasets that passed the validation",
                 len(validation_result.succeeded_data_sets),
