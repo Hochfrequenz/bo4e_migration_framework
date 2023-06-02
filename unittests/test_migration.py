@@ -3,13 +3,17 @@ Tests the overall data flow using bomf.
 """
 from typing import Optional
 
+from injector import Binder, Injector
+
 from bomf import (
     Bo4eDataSetToTargetMapper,
     EntityLoader,
     Filter,
+    IntermediateDataSet,
     MigrationStrategy,
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
+    TargetDataModel,
     ValidationManager,
 )
 from bomf.loader.entityloader import EntityLoadingResult
@@ -107,13 +111,16 @@ class TestMigrationStrategy:
         # here's some pre-processing, you can read some data, you can create relations, whatever
         raw_data = await _MySourceDataProvider().get_data()
         survivors = await _MyFilter().apply(raw_data)
-        to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
-        strategy = MyMigrationStrategy(
-            source_data_to_bo4e_mapper=to_bo4e_mapper,
-            validation=_my_validation,
-            bo4e_to_target_mapper=_MyToTargetMapper(),
-            target_loader=_MyTargetLoader(),
-        )
+
+        def _inject_for_migration_strategy(binder: Binder):
+            to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
+            binder.bind(SourceToBo4eDataSetMapper, to=to_bo4e_mapper)
+            binder.bind(ValidationManager, to=_my_validation)
+            binder.bind(Bo4eDataSetToTargetMapper, to=_MyToTargetMapper())  # type: ignore[type-abstract]
+            binder.bind(EntityLoader, to=_MyTargetLoader())  # type: ignore[type-abstract]
+
+        injector = Injector(_inject_for_migration_strategy)
+        strategy = injector.call_with_injection(MyMigrationStrategy.construct)
         result = await strategy.migrate()
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)
@@ -125,10 +132,25 @@ class TestMigrationStrategy:
         to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
         strategy = MyMigrationStrategy(
             source_data_to_bo4e_mapper=to_bo4e_mapper,
-            validation=_my_validation,
+            validation_manager=_my_validation,
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
         )
         result = await strategy.migrate_paginated(1)  # the chunk_size arg here is the only difference to the other test
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)
+
+    async def test_migration_strategy_injector(self):
+        # here's some pre-processing, you can read some data, you can create relations, whatever
+        raw_data = await _MySourceDataProvider().get_data()
+        survivors = await _MyFilter().apply(raw_data)
+        to_bo4e_mapper = _MyToBo4eMapper(what_ever_you_like=survivors)
+        strategy = MyMigrationStrategy(
+            source_data_to_bo4e_mapper=to_bo4e_mapper,
+            validation_manager=_my_validation,
+            bo4e_to_target_mapper=_MyToTargetMapper(),
+            target_loader=_MyTargetLoader(),
+        )
+        result = await strategy.migrate()
+        assert result is not None
+        assert len(result) == 3

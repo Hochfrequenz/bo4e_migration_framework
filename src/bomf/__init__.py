@@ -34,7 +34,6 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
-    @inject
     def __init__(
         self,
         source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet],
@@ -58,6 +57,22 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         The target loader moves the target entities into the actual target system.
         """
+
+    @classmethod
+    @inject
+    def construct(
+        cls,
+        source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper,
+        bo4e_to_target_mapper: Bo4eDataSetToTargetMapper,
+        target_loader: EntityLoader,
+        validation_manager: Optional[ValidationManager] = None,
+    ):
+        return cls(
+            source_data_to_bo4e_mapper=source_data_to_bo4e_mapper,
+            bo4e_to_target_mapper=bo4e_to_target_mapper,
+            target_loader=target_loader,
+            validation_manager=validation_manager,
+        )
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
         """
