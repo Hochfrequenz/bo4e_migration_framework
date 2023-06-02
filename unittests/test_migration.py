@@ -120,7 +120,7 @@ class TestMigrationStrategy:
             binder.bind(EntityLoader, to=_MyTargetLoader())  # type: ignore[type-abstract]
 
         injector = Injector(_inject_for_migration_strategy)
-        strategy = injector.call_with_injection(MyMigrationStrategy.construct)
+        strategy = injector.get(MyMigrationStrategy)
         result = await strategy.migrate()
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)

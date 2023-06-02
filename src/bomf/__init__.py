@@ -34,45 +34,32 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
+    @inject
     def __init__(
         self,
-        source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet],
-        bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet],
-        target_loader: EntityLoader[TargetDataModel],
-        validation_manager: Optional[ValidationManager[IntermediateDataSet]] = None,
-    ):
-        self.source_data_to_bo4e_mapper = source_data_to_bo4e_mapper
-        """
-        A mapper that transforms source data models into data sets that consist of bo4e objects
-        """
-        self.validation_manager = validation_manager
-        """
-        a set of validation rules that are applied to the bo4e data sets
-        """
-        self.bo4e_to_target_mapper = bo4e_to_target_mapper
-        """
-        a mapper that transforms bo4e data sets to a structure that suits the target system
-        """
-        self.target_loader = target_loader
-        """
-        The target loader moves the target entities into the actual target system.
-        """
-
-    @classmethod
-    @inject
-    def construct(
-        cls,
         source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper,
         bo4e_to_target_mapper: Bo4eDataSetToTargetMapper,
         target_loader: EntityLoader,
         validation_manager: Optional[ValidationManager] = None,
     ):
-        return cls(
-            source_data_to_bo4e_mapper=source_data_to_bo4e_mapper,
-            bo4e_to_target_mapper=bo4e_to_target_mapper,
-            target_loader=target_loader,
-            validation_manager=validation_manager,
-        )
+        self.source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet] = source_data_to_bo4e_mapper
+        """
+        A mapper that transforms source data models into data sets that consist of bo4e objects
+        """
+        self.validation_manager: Optional[ValidationManager[IntermediateDataSet]] = validation_manager
+        """
+        a set of validation rules that are applied to the bo4e data sets
+        """
+        self.bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[
+            TargetDataModel, IntermediateDataSet
+        ] = bo4e_to_target_mapper
+        """
+        a mapper that transforms bo4e data sets to a structure that suits the target system
+        """
+        self.target_loader: EntityLoader[TargetDataModel] = target_loader
+        """
+        The target loader moves the target entities into the actual target system.
+        """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
         """
