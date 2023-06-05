@@ -89,6 +89,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
             target_data_models = await self.bo4e_to_target_mapper.create_target_models(bo4e_datasets)
         self.logger.info("Loading %i target models into target system", len(target_data_models))
         loading_summaries = await self.target_loader.load_entities(target_data_models)
+        await self.target_loader.close()
         success_count, failure_count = _get_success_failure_count(loading_summaries)
         self.logger.info("Loaded %i entities successfully, %i failed", success_count, failure_count)
         return loading_summaries

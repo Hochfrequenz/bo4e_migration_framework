@@ -50,6 +50,11 @@ class SourceDataProvider(ABC, Generic[SourceDataModel, KeyTyp]):
         raises an error if the key is unknown
         """
 
+    async def close(self) -> None:
+        """
+        close the session of the loader, by default (no override) does nothing
+        """
+
 
 class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
     """

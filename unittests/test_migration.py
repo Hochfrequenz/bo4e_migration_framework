@@ -6,6 +6,8 @@ from unittest.mock import Mock
 
 from injector import Binder, Injector
 
+from injector import Binder, Injector
+
 from bomf import (
     Bo4eDataSetToTargetMapper,
     EntityLoader,

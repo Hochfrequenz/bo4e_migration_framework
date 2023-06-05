@@ -95,6 +95,11 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
         """
         return
 
+    async def close(self) -> None:
+        """
+        close the session of the loader, by default (no override) does nothing
+        """
+
     async def load(self, entity: _TargetEntity) -> LoadingSummary:
         """
         Loads the given entity into the target system and verifies it has been loaded.
