@@ -2,6 +2,9 @@
 Tests the overall data flow using bomf.
 """
 from typing import Optional
+from unittest.mock import Mock
+
+from injector import Binder, Injector
 
 from injector import Binder, Injector
 
@@ -149,8 +152,20 @@ class TestMigrationStrategy:
             binder.bind(Bo4eDataSetToTargetMapper, to=_MyToTargetMapper())  # type: ignore[type-abstract]
             binder.bind(EntityLoader, to=_MyTargetLoader())  # type: ignore[type-abstract]
 
+        def _inject_for_migration_strategy_dummy(binder: Binder):
+            binder.bind(SourceToBo4eDataSetMapper, to=Mock(SourceToBo4eDataSetMapper))
+            binder.bind(ValidationManager, to=Mock(ValidationManager))
+            binder.bind(Bo4eDataSetToTargetMapper, to=Mock(Bo4eDataSetToTargetMapper))  # type: ignore[type-abstract]
+            binder.bind(EntityLoader, to=Mock(EntityLoader))  # type: ignore[type-abstract]
+
         injector = Injector(_inject_for_migration_strategy)
+        injector_dummy = Injector(_inject_for_migration_strategy_dummy)
         strategy = injector.get(MyMigrationStrategy)
+        strategy_dummy = injector_dummy.get(MyMigrationStrategy)
+        assert isinstance(strategy, MyMigrationStrategy)
+        assert isinstance(strategy.source_data_to_bo4e_mapper, _MyToBo4eMapper)
+        assert isinstance(strategy_dummy, MyMigrationStrategy)
+        assert isinstance(strategy_dummy.source_data_to_bo4e_mapper, Mock)
         result = await strategy.migrate()
         assert result is not None
         assert len(result) == 3  # = source models -1(filter) -1(validation)
