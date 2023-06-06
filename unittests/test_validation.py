@@ -453,7 +453,7 @@ class TestValidation:
         )
         # This ensures that the ID is constant across python sessions - as long as the line number of the raising
         # exception in `check_fail` doesn't change.
-        assert sub_exceptions1[PathMappedValidator(validator_check_fail, {"x": "x"})].error_id == 47799448
+        assert sub_exceptions1[PathMappedValidator(validator_check_fail, {"x": "x"})].error_id == 1746866
 
     async def test_utility_required_and_optional(self):
         validation_manager = ValidationManager[DataSetTest]()

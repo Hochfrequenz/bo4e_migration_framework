@@ -79,21 +79,20 @@ def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = N
         module_name_hash = int(hashlib.blake2s((identifier[0] + identifier[1]).encode(), digest_size=4).hexdigest(), 16)
         random.seed(module_name_hash + identifier[2])
     # This range has no further meaning, but you have to define it.
-    return random.randint(1, 1000000000)
+    return random.randint(1_000_000, 9_999_999)
 
 
-async def _get_error_id(identifier: _IdentifierType) -> _IDType:
+def _get_error_id(identifier: _IdentifierType) -> _IDType:
     """
     Returns a unique ID for the provided identifier.
     """
     if identifier not in _ERROR_ID_MAP:
         new_error_id = None
-        async with asyncio.Lock():
-            while True:
-                new_error_id = _generate_new_id(identifier, last_id=new_error_id)
-                if new_error_id not in _ERROR_ID_MAP.inverse:
-                    break
-            _ERROR_ID_MAP[identifier] = new_error_id
+        while True:
+            new_error_id = _generate_new_id(identifier, last_id=new_error_id)
+            if new_error_id not in _ERROR_ID_MAP.inverse:
+                break
+        _ERROR_ID_MAP[identifier] = new_error_id
     return _ERROR_ID_MAP[identifier]
 
 
@@ -162,7 +161,7 @@ class ErrorHandler(Generic[DataSetT]):
         Logs a new validation error with the defined message. The `error` parameter will be set as `__cause__` of the
         validation error.
         """
-        error_id = await _get_error_id(_get_identifier(error)) if custom_error_id is None else custom_error_id
+        error_id = _get_error_id(_get_identifier(error)) if custom_error_id is None else custom_error_id
         error_nested = ValidationError(
             msg,
             error,
