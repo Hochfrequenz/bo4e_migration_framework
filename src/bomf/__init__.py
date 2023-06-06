@@ -108,13 +108,25 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
         return loading_summaries
 
-    async def migrate_paginated(self, chunk_size: int) -> list[LoadingSummary]:
+    async def migrate_paginated(
+        self, chunk_size: int, initial_offset: int = 0, upper_bound: Optional[int] = None
+    ) -> list[LoadingSummary]:
         """
         This is similar to migrate, but it loads the data in chunks of chunk_size.
         Therefore, the source_data_to_bo4e_mapper must support pagination.
+        You can specify an offset on where to start (initial_offset).
+        The upper_bound does not cap the number of entries you want to migrate but instead is a number up to which the
+        offset will definitely be incremented. This allows you to paginate over empty pages (because there's no matching
+        entry within the range covered by one page). If you don't specify an upper_bound, the migration will stop on the
+        first empty page.
         """
-        self.logger.info("Starting migration %s (with page size %i)", self.__class__.__name__, chunk_size)
-        offset = 0
+        self.logger.info(
+            "Starting migration %s (with page size %i and initial offset %i)",
+            self.__class__.__name__,
+            chunk_size,
+            initial_offset,
+        )
+        offset = initial_offset
         loading_summaries = []
         while True:
             self.logger.info("Processing offset=%i, limit=%i", offset, chunk_size)
@@ -132,8 +144,11 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                     raise PaginationNotSupportedException() from type_error
                 raise
             self.logger.debug("Received %i datasets (limit was %i)", len(bo4e_datasets), chunk_size)
-            if len(bo4e_datasets) == 0:
-                self.logger.info("Received no more datasets; Stopping")
+            if (upper_bound is None or offset > upper_bound) and len(bo4e_datasets) == 0:
+                if upper_bound is not None:
+                    self.logger.info("Reached first empty page after upper bound %i; Stopping", upper_bound)
+                else:
+                    self.logger.info("Received no more datasets (first empty page; no upper bound defined); Stopping")
                 break
             chunk_loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
             loading_summaries.extend(chunk_loading_summaries)
