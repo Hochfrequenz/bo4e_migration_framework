@@ -2,8 +2,10 @@
 mappers convert from source data model to BO4E and from BO4E to a target data model
 """
 import asyncio
+import logging
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from collections.abc import Callable
+from typing import Awaitable, Generic, Optional, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -66,3 +68,36 @@ class Bo4eDataSetToTargetMapper(ABC, Generic[TargetDataModel, IntermediateDataSe
         # here we could use some error handling in the future
         tasks = [self.create_target_model(dataset=dataset) for dataset in datasets]
         return await asyncio.gather(*tasks)
+
+
+_Source = TypeVar("_Source")
+_Target = TypeVar("_Target")
+
+
+def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catchers(
+    map_single: Callable[[_Source], Awaitable[_Target]],
+    logger: logging.Logger,  # the logger must not be none, because errors must never pass silently.
+) -> Callable[[list[_Source]], Awaitable[list[_Target]]]:
+    """
+    Assume there's an async f(x)->y.
+    Now imagine you wanted to use the function but automatically catch all the Exceptions that a single await f(x) may
+    throw.
+    This function does the overhead for you.
+    """
+
+    async def _call(single: _Source) -> Optional[_Target]:
+        try:
+            return await map_single(single)
+        except Exception as error:  # pylint:disable=broad-exception-caught
+            # errors should never pass silently unless explicitly silenced. this is no explicit silence.
+            logger.error(
+                "Error while calling %s on %s: %s", map_single.__name__, str(single), str(error), exc_info=error
+            )
+            return None
+
+    async def result_func(multiple: list[_Source]) -> list[_Target]:
+        tasks: list[Awaitable[Optional[_Target]]] = [_call(x) for x in multiple]
+        results = [x for x in await asyncio.gather(*tasks) if x is not None]
+        return results
+
+    return result_func
