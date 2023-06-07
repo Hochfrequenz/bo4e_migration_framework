@@ -101,3 +101,32 @@ def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catch
         return results
 
     return result_func
+
+
+def convert_single_mapping_into_list_mapping_with_single_pokemon_catchers(
+    map_single: Callable[[_Source], _Target],
+    logger: logging.Logger,  # the logger must not be none, because errors must never pass silently.
+) -> Callable[[list[_Source]], list[_Target]]:
+    """
+    Assume there's an sync f(x)->y.
+    Now imagine you wanted to use the function but automatically catch all the Exceptions that a single f(x) may
+    throw.
+    This function does the overhead for you.
+    """
+
+    def _call(single: _Source) -> Optional[_Target]:
+        try:
+            return map_single(single)
+        except Exception as error:  # pylint:disable=broad-exception-caught
+            # errors should never pass silently unless explicitly silenced. this is no explicit silence.
+            logger.error(
+                "Error while calling %s on %s: %s", map_single.__name__, str(single), str(error), exc_info=error
+            )
+            return None
+
+    def result_func(multiple: list[_Source]) -> list[_Target]:
+        results_and_nones: list[Optional[_Target]] = [_call(x) for x in multiple]
+        results = [x for x in results_and_nones if x is not None]
+        return results
+
+    return result_func
