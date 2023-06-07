@@ -75,7 +75,8 @@ _Target = TypeVar("_Target")
 
 
 def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catchers(
-    map_single: Callable[[_Source], Awaitable[_Target]], logger: Optional[logging.Logger] = None
+    map_single: Callable[[_Source], Awaitable[_Target]],
+    logger: logging.Logger,  # the logger must not be none, because errors must never pass silently.
 ) -> Callable[[list[_Source]], Awaitable[list[_Target]]]:
     """
     Assume there's an async f(x)->y.
@@ -87,9 +88,10 @@ def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catch
     async def _call(single: _Source) -> Optional[_Target]:
         try:
             return await map_single(single)
-        except Exception as error:
+        except Exception as error:  # pylint:disable=broad-exception-caught
+            # errors should never pass silently unless explicitly silenced. this is no explicit silence.
             logger.error(
-                f"Error while calling %s on %s: %s", map_single.__name__, str(single), str(error), exc_info=error
+                "Error while calling %s on %s: %s", map_single.__name__, str(single), str(error), exc_info=error
             )
             return None
 
