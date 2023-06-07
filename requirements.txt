@@ -18,7 +18,7 @@ iso3166==2.1.1
     # via bo4e
 networkx==3.1
     # via -r requirements.in
-pydantic==1.10.8
+pydantic==1.10.9
     # via
     #   -r requirements.in
     #   bo4e
