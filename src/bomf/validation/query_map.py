@@ -165,9 +165,16 @@ class QueryMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
         # parameter is optional. Instead, it will just be filled with the default value and treated as "not provided".
         for parameters in self.param_sets(param_iterables):
             parameter_dict: dict[str, Parameter] = {}
+            if isinstance(parameters, Exception):
+                yield parameters
+                continue
             for param_name, param_value in parameters.items():
                 if isinstance(param_value, Exception):
-                    assert param_name in self.validator.optional_param_names, "Shouldn't fail"
+                    assert param_name in self.validator.optional_param_names, (
+                        "If the parameter is required but not supplied you should yield an exception "
+                        "in `paran_sets` directly. The dictionary of parameters should only contain exceptions if"
+                        "they are negligible aka the parameter is optional."
+                    )
                     parameter_dict[param_name] = Parameter(
                         mapped_validator=self,
                         name=param_name,
@@ -184,14 +191,8 @@ class QueryMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                         provided=True,
                     )
             yield Parameters(self, **parameter_dict)
-        for param_name, iterable in param_iterables.items():
-            if param_name in self.validator.optional_param_names:
-                continue
-            assert iterable.cur_exceptions is not None
-            for exception in iterable.cur_exceptions:
-                yield exception
 
-    def param_sets(self, param_iterables: dict[str, _QueryIterable]) -> Iterator[dict[str, Any]]:
+    def param_sets(self, param_iterables: dict[str, _QueryIterable]) -> Iterator[dict[str, Any] | Exception]:
         """
         Gets for each parameter an iterable of all possible values. This method defines how those iterables are
         combined to parameter sets to call the validator with.
@@ -201,6 +202,12 @@ class QueryMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
         ordered_params = OrderedDict(param_iterables)
         for param_tuple in itertools.product(*ordered_params.values()):
             yield dict(zip(ordered_params.keys(), param_tuple))
+        for param_name, iterable in param_iterables.items():
+            if param_name in self.validator.optional_param_names:
+                continue
+            assert iterable.cur_exceptions is not None
+            for exception in iterable.cur_exceptions:
+                yield exception
 
     def __eq__(self, other):
         return isinstance(other, QueryMappedValidator) and self.param_map == other.param_map
