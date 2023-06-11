@@ -155,20 +155,26 @@ class QueryMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
         each parameter). The validator will be executed against all possible combinations of all parameter values.
         If a parameter list could not be filled correctly an error will be yielded instead.
         """
-        ordered_param_map = OrderedDict(self.param_map)
-        param_iterables = [
-            query.iterable(data_set, include_exceptions=param_name in self.validator.optional_param_names)
-            for param_name, query in ordered_param_map.items()
-        ]
+        param_iterables = {
+            param_name: query.iterable(data_set, include_exceptions=param_name in self.validator.optional_param_names)
+            for param_name, query in self.param_map.items()
+        }
         # I want to exclude exceptions from the iterables for required parameters because in those cases this function
         # will yield an exception, and we don't have to explore all the combinations with these exceptions.
         # I.e. if a tuple from the product below contains an exception, this should not be yielded because the
         # parameter is optional. Instead, it will just be filled with the default value and treated as "not provided".
-        for parameter_tuple in itertools.product(*param_iterables):
+        for parameters in self.param_sets(param_iterables):
             parameter_dict: dict[str, Parameter] = {}
-            for param_name, param_value in zip(ordered_param_map.keys(), parameter_tuple):
+            if isinstance(parameters, Exception):
+                yield parameters
+                continue
+            for param_name, param_value in parameters.items():
                 if isinstance(param_value, Exception):
-                    assert param_name in self.validator.optional_param_names, "Shouldn't fail"
+                    assert param_name in self.validator.optional_param_names, (
+                        "If the parameter is required but not supplied you should yield an exception "
+                        "in `paran_sets` directly. The dictionary of parameters should only contain exceptions if"
+                        "they are negligible aka the parameter is optional."
+                    )
                     parameter_dict[param_name] = Parameter(
                         mapped_validator=self,
                         name=param_name,
@@ -185,7 +191,18 @@ class QueryMappedValidator(MappedValidator[DataSetT, ValidatorFunctionT]):
                         provided=True,
                     )
             yield Parameters(self, **parameter_dict)
-        for param_name, iterable in zip(ordered_param_map.keys(), param_iterables):
+
+    def param_sets(self, param_iterables: dict[str, _QueryIterable]) -> Iterator[dict[str, Any] | Exception]:
+        """
+        Gets for each parameter an iterable of all possible values. This method defines how those iterables are
+        combined to parameter sets to call the validator with.
+        By standard this method returns the cartesian product of all iterables i.e. every possible combination.
+        You can override this method to change this behavior.
+        """
+        ordered_params = OrderedDict(param_iterables)
+        for param_tuple in itertools.product(*ordered_params.values()):
+            yield dict(zip(ordered_params.keys(), param_tuple))
+        for param_name, iterable in param_iterables.items():
             if param_name in self.validator.optional_param_names:
                 continue
             assert iterable.cur_exceptions is not None
