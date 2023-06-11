@@ -90,6 +90,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         self.logger.info("Loading %i target models into target system", len(target_data_models))
         loading_summaries = await self.target_loader.load_entities(target_data_models)
         await self.target_loader.close()
+        del target_data_models
         success_count, failure_count = _get_success_failure_count(loading_summaries)
         self.logger.info("Loaded %i entities successfully, %i failed", success_count, failure_count)
         return loading_summaries
@@ -151,6 +152,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                     self.logger.info("Received no more datasets (first empty page; no upper bound defined); Stopping")
                 break
             chunk_loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
+            del bo4e_datasets
             loading_summaries.extend(chunk_loading_summaries)
             await asyncio.sleep(1)  # give the system 1s some time to breathe
             offset += chunk_size
