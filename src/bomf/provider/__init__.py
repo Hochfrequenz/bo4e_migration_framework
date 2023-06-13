@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Generic, Mapping, TypeVar, Union
 
 from bomf import PaginationNotSupportedException
+from bomf.logging import logger
 
 SourceDataModel = TypeVar("SourceDataModel")
 """
@@ -66,19 +67,16 @@ class ListBasedSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp]):
         instantiate it by providing a list of source data models
         """
         self._models: list[SourceDataModel] = source_data_models
-        logger = logging.getLogger(self.__module__)
         for key, key_models in groupby(source_data_models, key=key_selector):
             affected_entries_count = len(list(key_models))
             if affected_entries_count > 1:
-                logger.warning(
+                logger.get().warning(
                     "There are %i>1 entries for the key '%s'. You might miss entries because the key is not unique.",
                     affected_entries_count,
                     str(key),
                 )
         self._models_dict: Mapping[KeyTyp, SourceDataModel] = {key_selector(m): m for m in source_data_models}
-        logging.getLogger(self.__module__).info(
-            "Read %i records from %s", len(self._models_dict), str(source_data_models)
-        )
+        logger.get().info("Read %i records from %s", len(self._models_dict), str(source_data_models))
         self.key_selector = key_selector
 
     async def get_entry(self, key: KeyTyp) -> SourceDataModel:

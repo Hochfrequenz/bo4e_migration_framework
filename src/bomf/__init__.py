@@ -11,6 +11,7 @@ from injector import inject
 
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
+from bomf.logging import logger
 from bomf.mapper import (
     Bo4eDataSetToTargetMapper,
     IntermediateDataSet,
@@ -60,10 +61,6 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         The target loader moves the target entities into the actual target system.
         """
-        self.logger = logging.getLogger(self.__class__.__name__)
-        """
-        Class logger
-        """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
         """
@@ -73,10 +70,11 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         3. load to target system.
         They have been encapsulated because they're used by both the migrate and migrate_paginated methods.
         """
+        _logger = logger.get()
         if self.validation_manager is not None:
-            self.logger.info("Applying validation rules to %i bo4e data sets", len(bo4e_datasets))
+            _logger.info("Applying validation rules to %i bo4e data sets", len(bo4e_datasets))
             validation_result = await self.validation_manager.validate(*bo4e_datasets)
-            self.logger.info(
+            _logger.info(
                 "Creating target models from those %i datasets that passed the validation",
                 len(validation_result.succeeded_data_sets),
             )
@@ -84,15 +82,15 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                 validation_result.succeeded_data_sets
             )
         else:
-            self.logger.warning("No validation set; skipping validation")
-            self.logger.info("Creating target models from all %i datasets", len(bo4e_datasets))
+            _logger.warning("No validation set; skipping validation")
+            _logger.info("Creating target models from all %i datasets", len(bo4e_datasets))
             target_data_models = await self.bo4e_to_target_mapper.create_target_models(bo4e_datasets)
-        self.logger.info("Loading %i target models into target system", len(target_data_models))
+        _logger.info("Loading %i target models into target system", len(target_data_models))
         loading_summaries = await self.target_loader.load_entities(target_data_models)
         await self.target_loader.close()
         del target_data_models
         success_count, failure_count = _get_success_failure_count(loading_summaries)
-        self.logger.info("Loaded %i entities successfully, %i failed", success_count, failure_count)
+        _logger.info("Loaded %i entities successfully, %i failed", success_count, failure_count)
         return loading_summaries
 
     async def migrate(self) -> list[LoadingSummary]:
@@ -103,8 +101,9 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         3. mapping from bo4e to the target data model
         4. loading the target data models into the target system.
         """
+        _logger = logger.get()
         # todo: here we should add some logging and statistics stuff
-        self.logger.info("Starting migration %s (w/o pagination)", self.__class__.__name__)
+        _logger.info("Starting migration %s (w/o pagination)", self.__class__.__name__)
         bo4e_datasets = await self.source_data_to_bo4e_mapper.create_data_sets()
         loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
         return loading_summaries
@@ -121,7 +120,8 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         entry within the range covered by one page). If you don't specify an upper_bound, the migration will stop on the
         first empty page.
         """
-        self.logger.info(
+        _logger = logger.get()
+        _logger.info(
             "Starting migration %s (with page size %i and initial offset %i)",
             self.__class__.__name__,
             chunk_size,
@@ -130,7 +130,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         offset = initial_offset
         loading_summaries = []
         while True:
-            self.logger.info("Processing offset=%i, limit=%i", offset, chunk_size)
+            _logger.info("Processing offset=%i, limit=%i", offset, chunk_size)
             try:
                 bo4e_datasets = await self.source_data_to_bo4e_mapper.create_data_sets(
                     limit=chunk_size, offset=offset
@@ -144,12 +144,12 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
                     # this case should be prevented by the type checker already
                     raise PaginationNotSupportedException() from type_error
                 raise
-            self.logger.debug("Received %i datasets (limit was %i)", len(bo4e_datasets), chunk_size)
+            _logger.debug("Received %i datasets (limit was %i)", len(bo4e_datasets), chunk_size)
             if (upper_bound is None or offset > upper_bound) and len(bo4e_datasets) == 0:
                 if upper_bound is not None:
-                    self.logger.info("Reached first empty page after upper bound %i; Stopping", upper_bound)
+                    _logger.info("Reached first empty page after upper bound %i; Stopping", upper_bound)
                 else:
-                    self.logger.info("Received no more datasets (first empty page; no upper bound defined); Stopping")
+                    _logger.info("Received no more datasets (first empty page; no upper bound defined); Stopping")
                 break
             chunk_loading_summaries = await self._map_to_target_validate_and_load(bo4e_datasets)
             del bo4e_datasets
@@ -157,7 +157,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
             await asyncio.sleep(1)  # give the system 1s some time to breathe
             offset += chunk_size
         success_count, failure_count = _get_success_failure_count(loading_summaries)
-        self.logger.info(
+        _logger.info(
             "Finished paginated migration. In total we loaded %i entities out of which %i succeeded and %i failed",
             len(loading_summaries),
             success_count,

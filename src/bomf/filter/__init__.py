@@ -9,6 +9,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Awaitable, Callable, Generic, TypeVar
 
+from bomf.logging import logger
+
 Candidate = TypeVar("Candidate")  #: an arbitrary but fixed type on which the filter operates
 
 
@@ -19,7 +21,7 @@ class Filter(ABC, Generic[Candidate]):
     """
 
     def __init__(self):
-        self._logger = logging.getLogger(self.__module__)
+        self._logger = logger.get()
 
     @abstractmethod
     async def predicate(self, candidate: Candidate) -> bool:
@@ -71,7 +73,7 @@ class AggregateFilter(ABC, Generic[Candidate, Aggregate]):
         """
         Instantiate by providing a filter that is applied on the aggregate
         """
-        self._logger = logging.getLogger(self.__module__)
+        self._logger = logger.get()
         self._base_filter = base_filter
 
     @abstractmethod

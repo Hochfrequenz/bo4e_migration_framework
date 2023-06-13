@@ -26,7 +26,7 @@ class TestFilter:
         ],
     )
     async def test_filter(self, filter_under_test: Filter, candidates: list[dict], survivors: list[dict], caplog):
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
+        caplog.set_level(logging.DEBUG, logger="")
         actual = await filter_under_test.apply(candidates)
         assert actual == survivors
         assert "1 out of 2 candidates have been removed by the filter" in caplog.messages
@@ -94,7 +94,7 @@ class TestAggregateFilter:
     async def test_aggregate_filter(
         self, filter_under_test: AggregateFilter, candidates: list[dict], survivors: list[dict], caplog
     ):
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
+        caplog.set_level(logging.DEBUG, logger="")
         actual = await filter_under_test.apply(candidates)
         assert actual == survivors
         assert "There are 4 candidates and 4 aggregates" in caplog.messages
@@ -144,7 +144,7 @@ class TestSourceDataProviderFilter:
             candidates, key_selector=lambda mc: mc.number
         )
         sdp_filter: SourceDataProviderFilter[_MyCandidate, int] = SourceDataProviderFilter(candidate_filter)
-        caplog.set_level(logging.DEBUG, logger=self.__module__)
+        caplog.set_level(logging.DEBUG, logger="")
         filtered_provider = await sdp_filter.apply(my_provider)
         assert isinstance(filtered_provider, SourceDataProvider)
         actual = await filtered_provider.get_data()

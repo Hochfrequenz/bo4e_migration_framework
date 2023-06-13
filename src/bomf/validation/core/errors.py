@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, AsyncGenerator, Generic, Optional, TypeAlias
 
 from bidict import bidict
 
-from bomf.validation.core.types import DataSetT, MappedValidatorT, ValidatorT, validation_logger
+from bomf.logging import logger
+from bomf.validation.core.types import DataSetT, MappedValidatorT, ValidatorT
 from bomf.validation.core.validator import Parameters
 
 if TYPE_CHECKING:
@@ -71,7 +72,7 @@ def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = N
     Generate a new random id with taking the identifier as seed. If last_id is provided it will be used as seed instead.
     """
     if last_id is not None:
-        validation_logger.debug(
+        logger.get().debug(
             "Duplicated ID for %s and %s. Generating new ID...", identifier, _ERROR_ID_MAP.inverse[last_id]
         )
         random.seed(last_id)
@@ -170,7 +171,7 @@ class ErrorHandler(Generic[DataSetT]):
             validation_manager,
             error_id,
         )
-        validation_logger.exception(
+        logger.get().exception(
             str(error_nested),
             exc_info=error_nested,
         )

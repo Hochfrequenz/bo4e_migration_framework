@@ -12,9 +12,10 @@ from typing import Generic, Iterator, Optional
 import networkx as nx
 from typeguard import check_type
 
+from bomf.logging import logger
 from bomf.validation.core.analysis import ValidationResult
 from bomf.validation.core.errors import ErrorHandler, ValidationError
-from bomf.validation.core.types import DataSetT, MappedValidatorSyncAsync, SyncValidatorFunction, validation_logger
+from bomf.validation.core.types import DataSetT, MappedValidatorSyncAsync, SyncValidatorFunction
 from bomf.validation.core.validator import MappedValidator, Parameters, is_async, is_sync
 
 
@@ -170,7 +171,7 @@ class ValidationManager(Generic[DataSetT]):
         )
         self.dependency_graph.add_node(mapped_validator)
         self.dependency_graph.add_edges_from(dependency_graph_edges)
-        validation_logger.debug("Registered validator: %s", repr(mapped_validator))
+        logger.get().debug("Registered validator: %s", repr(mapped_validator))
 
     async def _dependency_errored(self, current_mapped_validator: MappedValidatorSyncAsync) -> bool:
         """
@@ -356,7 +357,7 @@ class ValidationManager(Generic[DataSetT]):
 
         validation_result = ValidationResult(self, error_handlers)
         if log_summary:
-            validation_logger.info(
+            logger.get().info(
                 "Validation Summary: %i succeeded, %i failed, %i errors. %s",
                 validation_result.num_succeeds,
                 validation_result.num_fails,

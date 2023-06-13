@@ -51,7 +51,7 @@ class TestSourceDataProvider:
 
 class TestListBasedSourceDataProvider:
     async def test_list_based_provider(self, caplog):
-        caplog.set_level(logging.DEBUG, logger=ListBasedSourceDataProvider.__module__)
+        caplog.set_level(logging.DEBUG, logger="")
         my_provider = ListBasedSourceDataProvider(["foo", "bar", "baz"], key_selector=lambda x: x)
         assert len(await my_provider.get_data()) == 3
         assert len(await my_provider.get_paginated_data(offset=0, limit=0)) == 0
