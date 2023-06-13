@@ -10,6 +10,7 @@ from typing import Any, Generator, Generic, TypeGuard, Union, overload
 
 from frozendict import frozendict
 
+from bomf.logging import logger
 from bomf.validation.core.types import (
     AsyncValidatorFunction,
     DataSetT,
@@ -17,7 +18,6 @@ from bomf.validation.core.types import (
     SyncValidatorFunction,
     ValidatorFunctionT,
     ValidatorT,
-    validation_logger,
 )
 
 
@@ -44,7 +44,7 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
         if any(param.kind == param.POSITIONAL_ONLY for param in validator_signature.parameters.values()):
             raise ValueError("The function parameters must not contain positional only parameters")
         if validator_signature.return_annotation not in (None, validator_signature.empty):
-            validation_logger.warning(
+            logger.get().warning(
                 "Annotated return type is not None (the return value will be ignored): %s(...) -> %s",
                 validator_func.__name__,
                 validator_signature.return_annotation,
@@ -69,7 +69,7 @@ class Validator(Generic[DataSetT, ValidatorFunctionT]):
         self.optional_param_names = self.param_names - self.required_param_names
         self.name = validator_func.__name__
         self.is_async: bool = asyncio.iscoroutinefunction(validator_func)
-        validation_logger.debug("Created validator: %s", self.name)
+        logger.get().debug("Created validator: %s", self.name)
 
     def __hash__(self):
         return hash(self.func)
@@ -135,7 +135,7 @@ class MappedValidator(ABC, Generic[DataSetT, ValidatorFunctionT]):
     def __init__(self, validator: ValidatorT):
         self.validator: ValidatorT = validator
         self.name = validator.name
-        validation_logger.debug("Created ParameterProvider: %s, %s", self.__class__.__name__, self.validator.name)
+        logger.get().debug("Created ParameterProvider: %s, %s", self.__class__.__name__, self.validator.name)
 
     @abstractmethod
     def provide(self, data_set: DataSetT) -> Generator[Parameters[DataSetT] | Exception, None, None]:
