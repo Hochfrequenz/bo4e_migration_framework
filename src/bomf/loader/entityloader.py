@@ -157,18 +157,28 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
     def __init__(self, file_path: Path, list_encoder: Callable[[list[_TargetEntity]], list[dict]]):
         """provide a path to a json file (will be created if not exists and overwritten if exists)"""
         self._file_path = file_path
+        self._file_lock = asyncio.Lock()
         self._list_encoder = list_encoder
-        self._entities: list[_TargetEntity] = []
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
-        self._entities.append(entity)
+        async with self._file_lock:
+            if self._file_path.exists():
+                with open(self._file_path, "r", encoding="utf-8") as json_file:
+                    existing_entries = json.load(json_file)
+                existing_entries.extend(self._list_encoder([entity]))
+            else:
+                existing_entries = self._list_encoder([entity])
+            with open(self._file_path, "w+", encoding="utf-8") as outfile:
+                json.dump(self._list_encoder(existing_entries), outfile, ensure_ascii=False, indent=2)
+
         return None
 
     async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
         base_result = await super().load_entities(entities)
-        dict_list = self._list_encoder(self._entities)
-        with open(self._file_path, "w+", encoding="utf-8") as outfile:
-            json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
+        dict_list = self._list_encoder(entities)
+        async with self._file_lock:
+            with open(self._file_path, "w+", encoding="utf-8") as outfile:
+                json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
         return base_result
 
 

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 from typing import Optional
@@ -129,3 +130,15 @@ class TestJsonFileEntityLoader:
             json_body = json.load(infile)
         assert len(json_body) == 2
         assert json_body == [{"foo": "asd", "bar": 123}, {"foo": "qwe", "bar": 456}]
+
+    async def test_dumping_to_file_via_load_entity(self, tmp_path):
+        my_entity_a = MyPydanticClass(foo="asd", bar=123)
+        my_entity_b = MyPydanticClass(foo="qwe", bar=456)
+        file_path = Path(tmp_path) / Path("foo.json")
+        my_loader = MyLoader(file_path)
+        await asyncio.gather(my_loader.load_entity(my_entity_a), my_loader.load_entity(my_entity_b))
+        del my_loader
+        with open(file_path, "r", encoding="utf-8") as infile:
+            json_body = json.load(infile)
+        assert len(json_body) == 2
+        # we cannot guarantee the order of the entities
