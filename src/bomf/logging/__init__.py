@@ -1,3 +1,7 @@
+"""
+Sets up the logging for the bomf package. The logger is stored inside a ContextVar to support concurrent processing
+in e.g. web services.
+"""
 import logging
 from contextvars import ContextVar, Token
 from typing import Callable
@@ -14,7 +18,8 @@ def initialize_logger(context_specific_logger: logging.Logger) -> Callable[[], N
 
     def clear_logger():
         """
-        Clear the logger context variable. You should call this method after the migration to prevent too much memory usage.
+        Clear the logger context variable. You should call this method after the migration to prevent too much memory
+        usage.
         """
         logger.reset(token)
 
