@@ -162,14 +162,16 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
         async with self._file_lock:
+            existing_entries: list[dict]  # untyped entries
             if self._file_path.exists():
                 with open(self._file_path, "r", encoding="utf-8") as json_file:
-                    existing_entries = json.load(json_file)
+                    json_body = json.load(json_file)
+                    existing_entries = json_body
                 existing_entries.extend(self._list_encoder([entity]))
             else:
                 existing_entries = self._list_encoder([entity])
             with open(self._file_path, "w+", encoding="utf-8") as outfile:
-                json.dump(self._list_encoder(existing_entries), outfile, ensure_ascii=False, indent=2)
+                json.dump(existing_entries, outfile, ensure_ascii=False, indent=2)
 
         return None
 
@@ -201,5 +203,5 @@ class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], G
         """provide a file path"""
         super().__init__(
             file_path=file_path,
-            list_encoder=lambda x: json.loads(_ListOfPydanticModels(__root__=x).json(by_alias=True)),
+            list_encoder=lambda x: [y.model_dump() for y in _ListOfPydanticModels(root=x).root],
         )
