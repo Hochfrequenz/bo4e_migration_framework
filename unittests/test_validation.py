@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Any, Iterator, Optional
 
 import pytest
-from pydantic import BaseModel, Required
+from pydantic import BaseModel
 
 from bomf import ValidationManager
 from bomf.model import Bo4eDataSet
@@ -21,7 +21,7 @@ from bomf.validation.path_map import PathMappedValidator
 
 class Wrapper(BaseModel):
     x: str
-    z: Optional[str] = Required
+    z: Optional[str]
 
 
 class DataSetTest(Bo4eDataSet):
