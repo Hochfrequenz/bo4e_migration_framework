@@ -1,6 +1,6 @@
 attrs
 bo4e
-pydantic==1.*
+pydantic>=2.0.0
 typeguard
 frozendict
 bidict
