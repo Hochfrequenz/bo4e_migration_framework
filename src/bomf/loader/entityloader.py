@@ -189,8 +189,6 @@ _PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
 
 # pylint:disable=too-few-public-methods
 class _ListOfPydanticModels(RootModel[list[_PydanticTargetModel]], Generic[_PydanticTargetModel]):
-    # https://stackoverflow.com/a/58641115/10009545
-    # for the instantiation see the serialization unit test
     pass
 
 
