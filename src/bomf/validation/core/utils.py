@@ -48,5 +48,5 @@ def required_field(obj: Any, attribute_path: str, attribute_type: Any) -> Any:
         except AttributeError as error:
             current_path = ".".join(splitted_path[0 : index + 1])
             raise AttributeError(f"'{current_path}' does not exist") from error
-    check_type(attribute_path, current_obj, attribute_type)
+    check_type(current_obj, attribute_type)
     return current_obj

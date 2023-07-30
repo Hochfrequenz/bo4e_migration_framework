@@ -328,7 +328,7 @@ class TestValidation:
             pytest.param(
                 validator_type_check_fail_y,
                 {"x": "x", "y": "y"},
-                "type of y must be str; got int instead",
+                "int is not an instance of str",
                 id="Wrong parameter type",
             ),
         ],
