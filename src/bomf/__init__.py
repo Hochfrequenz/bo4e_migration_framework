@@ -73,7 +73,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         _logger = logger.get()
         if self.validation_manager is not None:
             _logger.info("Applying validation rules to %i bo4e data sets", len(bo4e_datasets))
-            validation_result = await self.validation_manager.validate(*bo4e_datasets)
+            validation_result = await self.validation_manager.validate(*bo4e_datasets, log_summary=True)
             _logger.info(
                 "Creating target models from those %i datasets that passed the validation",
                 len(validation_result.succeeded_data_sets),
