@@ -10,7 +10,7 @@ from enum import IntEnum, StrEnum
 from typing import Generic, Iterator, Optional
 
 import networkx as nx
-from typeguard import check_type
+from typeguard import TypeCheckError, check_type
 
 from bomf.logging import logger
 from bomf.validation.core.analysis import ValidationResult
@@ -211,11 +211,10 @@ class ValidationManager(Generic[DataSetT]):
             self.info.current_provided_params = params_or_exc
             for param_name, param in params_or_exc.items():
                 check_type(
-                    param.param_id,
                     param.value,
                     mapped_validator.validator.signature.parameters[param_name].annotation,
                 )
-        except TypeError as error:
+        except TypeCheckError as error:
             await self.info.error_handler.catch(
                 str(error), error, mapped_validator, self, custom_error_id=_CustomErrorIDS.PARAM_TYPE_MISMATCH
             )
