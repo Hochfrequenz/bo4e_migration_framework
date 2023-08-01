@@ -78,9 +78,15 @@ def _generate_new_id(identifier: _IdentifierType, last_id: Optional[_IDType] = N
         random.seed(last_id)
     else:
         module_name_hash = int(hashlib.blake2s((identifier[0] + identifier[1]).encode(), digest_size=4).hexdigest(), 16)
-        random.seed(module_name_hash + identifier[2])
+        random.seed(module_name_hash)
     # This range has no further meaning, but you have to define it.
-    return random.randint(1_000_000, 9_999_999)
+    rand_range = (1_000_000, 9_998_999)
+    # This guarantees that functions with up to 1000 lines of code remain stable in their first digits if an error
+    # changes in its line number inside the function.
+    error_id_range = (1_000_000, 9_999_999)
+    return (random.randint(*rand_range) + identifier[2] - error_id_range[0]) % (
+        error_id_range[1] - error_id_range[0] + 1
+    ) + error_id_range[0]
 
 
 def _get_error_id(identifier: _IdentifierType) -> _IDType:
