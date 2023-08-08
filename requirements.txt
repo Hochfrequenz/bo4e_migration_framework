@@ -10,7 +10,7 @@ attrs==23.1.0
     # via -r requirements.in
 bidict==0.22.1
     # via -r requirements.in
-bo4e==0.5.3
+bo4e==0.5.4
     # via -r requirements.in
 frozendict==2.3.8
     # via -r requirements.in
