@@ -145,7 +145,7 @@ class TestPydanticJsonFileEntityLoader:
     @pytest.mark.parametrize(
         "loader_class", [pytest.param(MyPydanticOnlyLoader), pytest.param(LegacyPydanticJsonFileEntityLoader)]
     )
-    async def test_dumping_to_file(
+    async def test_dumping_to_file_via_load_entities(
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
         my_entities = [MyPydanticClass(foo="asd", bar=x) for x in range(number_of_models)]
