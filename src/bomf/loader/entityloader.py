@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 import attrs
-from pydantic import RootModel  # pylint:disable=no-name-in-module
+from pydantic import BaseModel, RootModel, SerializeAsAny  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
@@ -185,11 +185,13 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
 
 
 _PydanticTargetModel = TypeVar("_PydanticTargetModel")
-# This is _not_ bound to BaseModel because of https://github.com/pydantic/pydantic/issues/7345
+# This is not bound to BaseModel, because I didn't manage to parametrize my generics properly.
+# See https://github.com/pydantic/pydantic/issues/7345#issuecomment-1707061637 for how it _should_ work.
+# The given example works in a minimal test but not for me in the scenario below
 
 
 # pylint:disable=too-few-public-methods
-class _ListOfPydanticModels(RootModel[list[_PydanticTargetModel]], Generic[_PydanticTargetModel]):
+class _ListOfPydanticModels(RootModel[list[SerializeAsAny[_PydanticTargetModel]]], Generic[_PydanticTargetModel]):
     pass
 
 
@@ -202,7 +204,6 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
         """provide a file path"""
         self._file_path = file_path
         self._file_lock = asyncio.Lock()
-        self._target_type = _ListOfPydanticModels[_PydanticTargetModel]
 
     def _load_entries_from_file_if_exist(self) -> _ListOfPydanticModels[_PydanticTargetModel]:
         if not self._file_path.exists():
