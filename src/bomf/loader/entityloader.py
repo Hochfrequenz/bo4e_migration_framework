@@ -185,7 +185,7 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
 
 
 _PydanticTargetModel = TypeVar("_PydanticTargetModel")
-# This is _not_ bound to BaseModel because:
+# This is _not_ bound to BaseModel because of https://github.com/pydantic/pydantic/issues/7345
 
 
 # pylint:disable=too-few-public-methods
