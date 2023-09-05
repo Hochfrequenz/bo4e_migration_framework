@@ -213,7 +213,7 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
             file_body = json_file.read()
             if not file_body:  # if the file exists but is empty
                 return empty_list
-            json_body = _ListOfPydanticModels[_PydanticTargetModel].model_validate_json(json_file.read())
+            json_body = _ListOfPydanticModels[_PydanticTargetModel].model_validate_json(file_body)
         return json_body
 
     async def load_entity(self, entity: _PydanticTargetModel) -> Optional[EntityLoadingResult]:
