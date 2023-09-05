@@ -206,9 +206,13 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
         self._file_lock = asyncio.Lock()
 
     def _load_entries_from_file_if_exist(self) -> _ListOfPydanticModels[_PydanticTargetModel]:
+        empty_list = _ListOfPydanticModels[_PydanticTargetModel].model_validate([])
         if not self._file_path.exists():
-            return _ListOfPydanticModels[_PydanticTargetModel].model_validate([])
+            return empty_list
         with open(self._file_path, "r", encoding="utf-8") as json_file:
+            file_body = json_file.read()
+            if not file_body:  # if the file exists but is empty
+                return empty_list
             json_body = _ListOfPydanticModels[_PydanticTargetModel].model_validate_json(json_file.read())
         return json_body
 
