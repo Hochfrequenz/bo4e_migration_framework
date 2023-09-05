@@ -1,11 +1,18 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type
 
-from pydantic import BaseModel
+import pytest
+from pydantic import BaseModel, RootModel
+from typing_extensions import deprecated
 
-from bomf.loader.entityloader import EntityLoader, EntityLoadingResult, PydanticJsonFileEntityLoader
+from bomf.loader.entityloader import (
+    EntityLoader,
+    EntityLoadingResult,
+    JsonFileEntityLoader,
+    PydanticJsonFileEntityLoader,
+)
 
 
 class _ExampleEntity:
@@ -119,11 +126,26 @@ class MyLoader(PydanticJsonFileEntityLoader[MyPydanticClass]):
     """entity loader fo my pydantic class"""
 
 
-class TestJsonFileEntityLoader:
-    async def test_dumping_to_file(self, tmp_path):
+@deprecated("use PydanticJsonFileEntityLoader instead; this is just here to keep the coverage of JsonFileEntityLoader")
+class LegacyPydanticJsonFileEntityLoader(JsonFileEntityLoader[MyPydanticClass]):
+    """
+    A json file entity loader specifically for pydantic models (legacy code)
+    """
+
+    def __init__(self, file_path: Path):
+        """provide a file path"""
+        super().__init__(
+            file_path=file_path,
+            list_encoder=lambda x: [y.model_dump() for y in RootModel[list[MyPydanticClass]](root=x).root],
+        )
+
+
+class TestPydanticJsonFileEntityLoader:
+    @pytest.mark.parametrize("loader_class", [pytest.param(MyLoader), pytest.param(LegacyPydanticJsonFileEntityLoader)])
+    async def test_dumping_to_file(self, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path):
         my_entities = [MyPydanticClass(foo="asd", bar=123), MyPydanticClass(foo="qwe", bar=456)]
         file_path = Path(tmp_path) / Path("foo.json")
-        my_loader = MyLoader(file_path)
+        my_loader = loader_class(file_path)
         await my_loader.load_entities(my_entities)
         del my_loader
         with open(file_path, "r", encoding="utf-8") as infile:
@@ -131,11 +153,12 @@ class TestJsonFileEntityLoader:
         assert len(json_body) == 2
         assert json_body == [{"foo": "asd", "bar": 123}, {"foo": "qwe", "bar": 456}]
 
-    async def test_dumping_to_file_via_load_entity(self, tmp_path):
+    @pytest.mark.parametrize("loader_class", [pytest.param(MyLoader), pytest.param(LegacyPydanticJsonFileEntityLoader)])
+    async def test_dumping_to_file_via_load_entity(self, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path):
         my_entity_a = MyPydanticClass(foo="asd", bar=123)
         my_entity_b = MyPydanticClass(foo="qwe", bar=456)
         file_path = Path(tmp_path) / Path("foo.json")
-        my_loader = MyLoader(file_path)
+        my_loader = loader_class(file_path)
         await asyncio.gather(my_loader.load_entity(my_entity_a), my_loader.load_entity(my_entity_b))
         del my_loader
         with open(file_path, "r", encoding="utf-8") as infile:

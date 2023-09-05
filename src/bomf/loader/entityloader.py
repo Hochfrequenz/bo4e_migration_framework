@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 import attrs
-from pydantic import BaseModel, RootModel  # pylint:disable=no-name-in-module
+from pydantic import RootModel  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
@@ -160,19 +160,19 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         self._file_lock = asyncio.Lock()
         self._list_encoder = list_encoder
 
+    def _load_entries_from_file_if_exist(self) -> list[dict]:
+        if not self._file_path.exists():
+            return []
+        with open(self._file_path, "r", encoding="utf-8") as json_file:
+            json_body = json.load(json_file)
+        return json_body
+
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
         async with self._file_lock:
-            existing_entries: list[dict]  # untyped entries
-            if self._file_path.exists():
-                with open(self._file_path, "r", encoding="utf-8") as json_file:
-                    json_body = json.load(json_file)
-                    existing_entries = json_body
-                existing_entries.extend(self._list_encoder([entity]))
-            else:
-                existing_entries = self._list_encoder([entity])
+            existing_entries = self._load_entries_from_file_if_exist()
+            existing_entries.extend(self._list_encoder([entity]))
             with open(self._file_path, "w+", encoding="utf-8") as outfile:
                 json.dump(existing_entries, outfile, ensure_ascii=False, indent=2)
-
         return None
 
     async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
@@ -184,7 +184,8 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         return base_result
 
 
-_PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
+_PydanticTargetModel = TypeVar("_PydanticTargetModel")
+# This is _not_ bound to BaseModel because:
 
 
 # pylint:disable=too-few-public-methods
@@ -192,14 +193,39 @@ class _ListOfPydanticModels(RootModel[list[_PydanticTargetModel]], Generic[_Pyda
     pass
 
 
-class PydanticJsonFileEntityLoader(JsonFileEntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
+class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
     """
     A json file entity loader specifically for pydantic models
     """
 
     def __init__(self, file_path: Path):
         """provide a file path"""
-        super().__init__(
-            file_path=file_path,
-            list_encoder=lambda x: [y.model_dump() for y in _ListOfPydanticModels(root=x).root],
-        )
+        self._file_path = file_path
+        self._file_lock = asyncio.Lock()
+        self._target_type = _ListOfPydanticModels[_PydanticTargetModel]
+
+    def _load_entries_from_file_if_exist(self) -> _ListOfPydanticModels[_PydanticTargetModel]:
+        if not self._file_path.exists():
+            return _ListOfPydanticModels[_PydanticTargetModel].model_validate([])
+        with open(self._file_path, "r", encoding="utf-8") as json_file:
+            json_body = _ListOfPydanticModels[_PydanticTargetModel].model_validate_json(json_file.read())
+        return json_body
+
+    async def load_entity(self, entity: _PydanticTargetModel) -> Optional[EntityLoadingResult]:
+        async with self._file_lock:
+            existing_entries = self._load_entries_from_file_if_exist()
+            existing_entries.root.extend([entity])
+            with open(self._file_path, "w+", encoding="utf-8") as outfile:
+                outfile.write(existing_entries.model_dump_json(indent=2))
+        return None
+
+    async def load_entities(self, entities: list[_PydanticTargetModel]) -> list[LoadingSummary]:
+        async with self._file_lock:
+            existing_entries = self._load_entries_from_file_if_exist()
+            all_entries = _ListOfPydanticModels[_PydanticTargetModel].model_validate(existing_entries.root + entities)
+            with open(self._file_path, "w+", encoding="utf-8") as outfile:
+                outfile.write(all_entries.model_dump_json(indent=2))
+        return [LoadingSummary(was_loaded_successfully=True)] * len(entities)
+
+    async def verify(self, entity: _PydanticTargetModel, id_in_target_system: Optional[str] = None) -> bool:
+        return True
