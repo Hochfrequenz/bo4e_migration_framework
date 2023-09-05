@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 import attrs
-from pydantic import BaseModel, RootModel, SerializeAsAny  # pylint:disable=no-name-in-module
+from pydantic import RootModel, SerializeAsAny  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
