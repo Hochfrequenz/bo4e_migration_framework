@@ -189,7 +189,7 @@ class TestPydanticJsonFileEntityLoader:
             with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as tmp_file:
                 json_file_path = Path(tmp_file.name)
                 assert json_file_path.exists()
-                json_file_loader = loader_class(json_file_path)
+                json_file_loader = loader_class(json_file_path)  # type:ignore[call-arg]
                 if load_multiple:
                     _ = await json_file_loader.load_entities([])
                 else:
