@@ -177,11 +177,10 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         return None
 
     async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
-        base_result = await super().load_entities(entities)
         dict_list = self._list_encoder(entities)
         with open(self._file_path, "w+", encoding="utf-8") as outfile:
             json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
-        return base_result
+        return [LoadingSummary(was_loaded_successfully=True, loaded_at=datetime.utcnow())] * len(entities)
 
 
 _PydanticTargetModel = TypeVar("_PydanticTargetModel")
