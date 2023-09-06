@@ -157,7 +157,6 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
     def __init__(self, file_path: Path, list_encoder: Callable[[list[_TargetEntity]], list[dict]]):
         """provide a path to a json file (will be created if not exists and overwritten if exists)"""
         self._file_path = file_path
-        self._file_lock = asyncio.Lock()
         self._list_encoder = list_encoder
 
     def _load_entries_from_file_if_exist(self) -> list[dict]:
@@ -171,19 +170,17 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         return json_body
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
-        async with self._file_lock:
-            existing_entries = self._load_entries_from_file_if_exist()
-            existing_entries.extend(self._list_encoder([entity]))
-            with open(self._file_path, "w+", encoding="utf-8") as outfile:
-                json.dump(existing_entries, outfile, ensure_ascii=False, indent=2)
+        existing_entries = self._load_entries_from_file_if_exist()
+        existing_entries.extend(self._list_encoder([entity]))
+        with open(self._file_path, "w+", encoding="utf-8") as outfile:
+            json.dump(existing_entries, outfile, ensure_ascii=False, indent=2)
         return None
 
     async def load_entities(self, entities: list[_TargetEntity]) -> list[LoadingSummary]:
         base_result = await super().load_entities(entities)
         dict_list = self._list_encoder(entities)
-        async with self._file_lock:
-            with open(self._file_path, "w+", encoding="utf-8") as outfile:
-                json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
+        with open(self._file_path, "w+", encoding="utf-8") as outfile:
+            json.dump(dict_list, outfile, ensure_ascii=False, indent=2)
         return base_result
 
 
@@ -206,7 +203,6 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
     def __init__(self, file_path: Path):
         """provide a file path"""
         self._file_path = file_path
-        self._file_lock = asyncio.Lock()
 
     def _load_entries_from_file_if_exist(self) -> _ListOfPydanticModels[_PydanticTargetModel]:
         empty_list = _ListOfPydanticModels[_PydanticTargetModel].model_validate([])
@@ -220,19 +216,17 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
         return json_body
 
     async def load_entity(self, entity: _PydanticTargetModel) -> Optional[EntityLoadingResult]:
-        async with self._file_lock:
-            existing_entries = self._load_entries_from_file_if_exist()
-            existing_entries.root.extend([entity])
-            with open(self._file_path, "w+", encoding="utf-8") as outfile:
-                outfile.write(existing_entries.model_dump_json(indent=2))
+        existing_entries = self._load_entries_from_file_if_exist()
+        existing_entries.root.extend([entity])
+        with open(self._file_path, "w+", encoding="utf-8") as outfile:
+            outfile.write(existing_entries.model_dump_json(indent=2))
         return None
 
     async def load_entities(self, entities: list[_PydanticTargetModel]) -> list[LoadingSummary]:
-        async with self._file_lock:
-            existing_entries = self._load_entries_from_file_if_exist()
-            all_entries = _ListOfPydanticModels[_PydanticTargetModel].model_validate(existing_entries.root + entities)
-            with open(self._file_path, "w+", encoding="utf-8") as outfile:
-                outfile.write(all_entries.model_dump_json(indent=2))
+        existing_entries = self._load_entries_from_file_if_exist()
+        all_entries = _ListOfPydanticModels[_PydanticTargetModel].model_validate(existing_entries.root + entities)
+        with open(self._file_path, "w+", encoding="utf-8") as outfile:
+            outfile.write(all_entries.model_dump_json(indent=2))
         return [LoadingSummary(was_loaded_successfully=True)] * len(entities)
 
     async def verify(self, entity: _PydanticTargetModel, id_in_target_system: Optional[str] = None) -> bool:
