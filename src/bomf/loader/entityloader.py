@@ -167,7 +167,7 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
             file_body = json_file.read()
             if not file_body:
                 return []
-            json_body = json.load(file_body)
+            json_body = json.loads(file_body)
         return json_body
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
