@@ -164,7 +164,10 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         if not self._file_path.exists():
             return []
         with open(self._file_path, "r", encoding="utf-8") as json_file:
-            json_body = json.load(json_file)
+            file_body = json_file.read()
+            if not file_body:
+                return []
+            json_body = json.load(file_body)
         return json_body
 
     async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:

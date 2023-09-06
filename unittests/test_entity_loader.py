@@ -1,5 +1,6 @@
 import asyncio
 import json
+import tempfile
 from pathlib import Path
 from typing import Optional, Type
 
@@ -175,3 +176,23 @@ class TestPydanticJsonFileEntityLoader:
             json_body = json.load(infile)
         assert len(json_body) == number_of_models
         # we cannot guarantee the order of the entities
+
+    @pytest.mark.parametrize("load_multiple", [True, False])
+    @pytest.mark.parametrize(
+        "loader_class", [pytest.param(MyPydanticOnlyLoader), pytest.param(LegacyPydanticJsonFileEntityLoader)]
+    )
+    async def test_loader_doesnt_crash_for_empty_file(
+        self, loader_class: Type[EntityLoader[MyPydanticClass]], load_multiple: bool
+    ):
+        json_file_path: Path
+        try:
+            with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as tmp_file:
+                json_file_path = Path(tmp_file.name)
+                assert json_file_path.exists()
+                json_file_loader = loader_class(json_file_path)
+                if load_multiple:
+                    _ = await json_file_loader.load_entities([])
+                else:
+                    _ = await json_file_loader.load_entity(MyPydanticClass(foo="asd", bar=123))
+        finally:
+            json_file_path.unlink()
