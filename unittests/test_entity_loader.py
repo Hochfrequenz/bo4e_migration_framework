@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Type
 
 import pytest
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, TypeAdapter
 from typing_extensions import deprecated
 
 from bomf.loader.entityloader import (
@@ -135,9 +135,10 @@ class LegacyPydanticJsonFileEntityLoader(JsonFileEntityLoader[MyPydanticClass]):
 
     def __init__(self, file_path: Path):
         """provide a file path"""
+        list_type_adapter = TypeAdapter(list[MyPydanticClass])
         super().__init__(
             file_path=file_path,
-            list_encoder=lambda x: [y.model_dump() for y in RootModel[list[MyPydanticClass]](root=x).root],
+            list_encoder=lambda x: list_type_adapter.dump_python(x),
         )
 
 
