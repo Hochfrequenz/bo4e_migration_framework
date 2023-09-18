@@ -6,3 +6,4 @@ frozendict
 bidict
 networkx
 injector
+python-generics

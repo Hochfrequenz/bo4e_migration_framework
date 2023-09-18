@@ -10,13 +10,7 @@ from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 import attrs
 from generics import get_filled_type
-from pydantic import (  # pylint:disable=no-name-in-module
-    BaseModel,
-    RootModel,
-    SerializeAsAny,
-    TypeAdapter,
-    ValidationError,
-)
+from pydantic import BaseModel, TypeAdapter, ValidationError  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
@@ -188,9 +182,6 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
 
 
 _PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
-# This is not bound to BaseModel, because I didn't manage to parametrize my generics properly.
-# See https://github.com/pydantic/pydantic/issues/7345#issuecomment-1707061637 for how it _should_ work.
-# The given example works in a minimal test but not for me in the scenario below
 
 
 class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_PydanticTargetModel]):
@@ -201,10 +192,10 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
     def __init__(self, file_path: Path):
         """provide a file path"""
         self._file_path = file_path
-        self._model: type[_PydanticTargetModel] = get_filled_type(
-            self, PydanticJsonFileEntityLoader, _PydanticTargetModel
+        self._model: type[_PydanticTargetModel] = get_filled_type(self, PydanticJsonFileEntityLoader, 0)
+        self._list_type_adapter: TypeAdapter[list[_PydanticTargetModel]] = TypeAdapter(
+            list[self._model]  # type:ignore[name-defined]
         )
-        self._list_type_adapter: TypeAdapter[list[_PydanticTargetModel]] = TypeAdapter(list[self._model])
 
     async def load_entity(self, entity: _PydanticTargetModel) -> Optional[EntityLoadingResult]:
         await self.load_entities([entity])
