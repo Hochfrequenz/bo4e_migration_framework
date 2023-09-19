@@ -5,24 +5,21 @@ from typing import Optional
 from unittest.mock import Mock
 
 from injector import Binder, Injector
+from pvframework import PathMappedValidator, Validator
+from pvframework.types import SyncValidatorFunction
 
 from bomf import (
     Bo4eDataSetToTargetMapper,
     EntityLoader,
     Filter,
-    IntermediateDataSet,
     MigrationStrategy,
     SourceDataProvider,
     SourceToBo4eDataSetMapper,
-    TargetDataModel,
     ValidationManager,
 )
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
 from bomf.provider import KeyTyp
-from bomf.validation import Validator
-from bomf.validation.core import SyncValidatorFunction
-from bomf.validation.path_map import PathMappedValidator
 
 _MySourceDataModel = dict[str, str]
 _MyKeyTyp = str
