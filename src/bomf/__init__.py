@@ -8,6 +8,7 @@ from typing import Generic, Optional
 
 import attrs
 from injector import inject
+from pvframework import ValidationManager
 
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
@@ -20,7 +21,6 @@ from bomf.mapper import (
     TargetDataModel,
 )
 from bomf.provider import KeyTyp, SourceDataProvider
-from bomf.validation import ValidationManager
 
 
 # pylint:disable=too-few-public-methods
