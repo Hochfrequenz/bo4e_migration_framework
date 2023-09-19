@@ -36,6 +36,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
+    # pylint:disable=too-many-arguments
     @inject
     def __init__(
         self,
@@ -62,6 +63,10 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         self.target_loader: EntityLoader[TargetDataModel] = target_loader
         """
         The target loader moves the target entities into the actual target system.
+        """
+        self.config: MigrationConfig = config
+        """
+        The configuration of the MigrationStrategy.
         """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
