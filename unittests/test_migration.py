@@ -103,7 +103,7 @@ class MyMigrationStrategy(MigrationStrategy[_MyIntermediateDataModel, _MyTargetD
 
 
 my_migration_config = MigrationConfig(
-    migration_key_date=datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=UTC)
+    migration_key_date=datetime(2021, 1, 1, tzinfo=UTC),
 )
 
 
