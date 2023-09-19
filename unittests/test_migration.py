@@ -1,11 +1,10 @@
 """
 Tests the overall data flow using bomf.
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Optional
 from unittest.mock import Mock
 
-import pytz
 from injector import Binder, Injector
 from pvframework import PathMappedValidator, Validator
 from pvframework.types import SyncValidatorFunction
@@ -19,10 +18,10 @@ from bomf import (
     SourceToBo4eDataSetMapper,
     ValidationManager,
 )
+from bomf.config import MigrationConfig
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
 from bomf.provider import KeyTyp
-from config import MigrationConfig
 
 _MySourceDataModel = dict[str, str]
 _MyKeyTyp = str
@@ -104,7 +103,7 @@ class MyMigrationStrategy(MigrationStrategy[_MyIntermediateDataModel, _MyTargetD
 
 
 my_migration_config = MigrationConfig(
-    migration_key_date=datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.UTC)
+    migration_key_date=datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=UTC)
 )
 
 

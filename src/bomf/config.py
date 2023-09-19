@@ -1,6 +1,8 @@
+"""
+This module provides a class to hold configuration values for the `MigrationStrategy`.
+"""
 from datetime import datetime
 
-import pytz
 from pydantic import BaseModel, ConfigDict, field_validator
 
 

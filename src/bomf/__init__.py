@@ -2,14 +2,13 @@
 BOMF stands for BO4E Migration Framework.
 """
 import asyncio
-import logging
 from abc import ABC
 from typing import Generic, Optional
 
-import attrs
 from injector import inject
 from pvframework import ValidationManager
 
+from bomf.config import MigrationConfig
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
 from bomf.logging import logger
@@ -21,7 +20,6 @@ from bomf.mapper import (
     TargetDataModel,
 )
 from bomf.provider import KeyTyp, SourceDataProvider
-from config import MigrationConfig
 
 
 # pylint:disable=too-few-public-methods
