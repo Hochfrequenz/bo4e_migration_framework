@@ -21,6 +21,7 @@ from bomf.mapper import (
     TargetDataModel,
 )
 from bomf.provider import KeyTyp, SourceDataProvider
+from config import MigrationConfig
 
 
 # pylint:disable=too-few-public-methods
@@ -41,6 +42,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper,
         bo4e_to_target_mapper: Bo4eDataSetToTargetMapper,
         target_loader: EntityLoader,
+        config: MigrationConfig,
         validation_manager: Optional[ValidationManager] = None,
     ):
         self.source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet] = source_data_to_bo4e_mapper

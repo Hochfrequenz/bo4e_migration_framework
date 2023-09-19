@@ -1,9 +1,11 @@
 """
 Tests the overall data flow using bomf.
 """
+from datetime import datetime
 from typing import Optional
 from unittest.mock import Mock
 
+import pytz
 from injector import Binder, Injector
 from pvframework import PathMappedValidator, Validator
 from pvframework.types import SyncValidatorFunction
@@ -20,6 +22,7 @@ from bomf import (
 from bomf.loader.entityloader import EntityLoadingResult
 from bomf.model import Bo4eDataSet
 from bomf.provider import KeyTyp
+from config import MigrationConfig
 
 _MySourceDataModel = dict[str, str]
 _MyKeyTyp = str
@@ -100,6 +103,11 @@ class MyMigrationStrategy(MigrationStrategy[_MyIntermediateDataModel, _MyTargetD
     pass
 
 
+my_migration_config = MigrationConfig(
+    migration_key_date=datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.UTC)
+)
+
+
 class TestMigrationStrategy:
     """
     This is more of an integration than a unit test. All the single components come together here.
@@ -115,6 +123,7 @@ class TestMigrationStrategy:
             validation_manager=_my_validation,
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
+            config=my_migration_config,
         )
         result = await strategy.migrate()
         assert result is not None
@@ -130,6 +139,7 @@ class TestMigrationStrategy:
             validation_manager=_my_validation,
             bo4e_to_target_mapper=_MyToTargetMapper(),
             target_loader=_MyTargetLoader(),
+            config=my_migration_config,
         )
         result = await strategy.migrate_paginated(1)  # the chunk_size arg here is the only difference to the other test
         assert result is not None
@@ -146,12 +156,14 @@ class TestMigrationStrategy:
             binder.bind(ValidationManager, to=_my_validation)
             binder.bind(Bo4eDataSetToTargetMapper, to=_MyToTargetMapper())  # type: ignore[type-abstract]
             binder.bind(EntityLoader, to=_MyTargetLoader())  # type: ignore[type-abstract]
+            binder.bind(MigrationConfig, to=my_migration_config)
 
         def _inject_for_migration_strategy_dummy(binder: Binder):
             binder.bind(SourceToBo4eDataSetMapper, to=Mock(SourceToBo4eDataSetMapper))
             binder.bind(ValidationManager, to=Mock(ValidationManager))
             binder.bind(Bo4eDataSetToTargetMapper, to=Mock(Bo4eDataSetToTargetMapper))  # type: ignore[type-abstract]
             binder.bind(EntityLoader, to=Mock(EntityLoader))  # type: ignore[type-abstract]
+            binder.bind(MigrationConfig, to=Mock(MigrationConfig))
 
         injector = Injector(_inject_for_migration_strategy)
         injector_dummy = Injector(_inject_for_migration_strategy_dummy)
