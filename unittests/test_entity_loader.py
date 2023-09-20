@@ -154,7 +154,9 @@ class TestPydanticJsonFileEntityLoader:
     async def test_dumping_to_file_via_load_entities(
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
-        my_entities = [MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)]
+        my_entities = [
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)
+        ]  # type:ignore[call-arg]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         await my_loader.load_entities(my_entities)
@@ -171,7 +173,9 @@ class TestPydanticJsonFileEntityLoader:
     async def test_dumping_to_file_via_load_entity(
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
-        my_entities = [MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)]
+        my_entities = [
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)
+        ]  # type:ignore[call-arg]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         loading_tasks = [my_loader.load_entity(x) for x in my_entities]
@@ -198,6 +202,8 @@ class TestPydanticJsonFileEntityLoader:
                 if load_multiple:
                     _ = await json_file_loader.load_entities([])
                 else:
-                    _ = await json_file_loader.load_entity(MyPydanticClass(foo="asd", bar=123, test="test"))
+                    _ = await json_file_loader.load_entity(
+                        MyPydanticClass(foo="asd", bar=123, test="test")
+                    )  # type:ignore[call-arg]
         finally:
             json_file_path.unlink()
