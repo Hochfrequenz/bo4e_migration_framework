@@ -123,7 +123,7 @@ class MyPydanticClass(BaseModel):
         populate_by_name=True,
     )
     foo: str
-    bar: int
+    bar: int = Field(alias="bar")
     test: str = Field(alias="random_foo_bar")
 
 
@@ -142,7 +142,8 @@ class LegacyPydanticJsonFileEntityLoader(JsonFileEntityLoader[MyPydanticClass]):
         list_type_adapter = TypeAdapter(list[MyPydanticClass])
         super().__init__(
             file_path=file_path,
-            list_encoder=lambda x: list_type_adapter.dump_python(x),
+            list_encoder=lambda x: list_type_adapter.dump_python(x, by_alias=True),
+
         )
 
 
@@ -155,8 +156,8 @@ class TestPydanticJsonFileEntityLoader:
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
         my_entities = [
-            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)
-        ]  # type:ignore[call-arg]
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+        ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         await my_loader.load_entities(my_entities)
@@ -174,8 +175,8 @@ class TestPydanticJsonFileEntityLoader:
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
         my_entities = [
-            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)
-        ]  # type:ignore[call-arg]
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+        ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         loading_tasks = [my_loader.load_entity(x) for x in my_entities]
@@ -203,7 +204,7 @@ class TestPydanticJsonFileEntityLoader:
                     _ = await json_file_loader.load_entities([])
                 else:
                     _ = await json_file_loader.load_entity(
-                        MyPydanticClass(foo="asd", bar=123, test="test")
-                    )  # type:ignore[call-arg]
+                        MyPydanticClass(foo="asd", bar=123, test="test")  # type:ignore[call-arg]
+                    )
         finally:
             json_file_path.unlink()
