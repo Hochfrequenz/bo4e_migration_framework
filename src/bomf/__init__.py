@@ -2,14 +2,13 @@
 BOMF stands for BO4E Migration Framework.
 """
 import asyncio
-import logging
 from abc import ABC
 from typing import Generic, Optional
 
-import attrs
 from injector import inject
 from pvframework import ValidationManager
 
+from bomf.config import MigrationConfig
 from bomf.filter import Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
 from bomf.logging import logger
@@ -35,12 +34,14 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
     A migration strategy describes the whole migration flow of datasets from a source to a target system
     """
 
+    # pylint:disable=too-many-arguments
     @inject
     def __init__(
         self,
         source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper,
         bo4e_to_target_mapper: Bo4eDataSetToTargetMapper,
         target_loader: EntityLoader,
+        config: MigrationConfig,
         validation_manager: Optional[ValidationManager] = None,
     ):
         self.source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet] = source_data_to_bo4e_mapper
@@ -60,6 +61,10 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         self.target_loader: EntityLoader[TargetDataModel] = target_loader
         """
         The target loader moves the target entities into the actual target system.
+        """
+        self.config: MigrationConfig = config
+        """
+        The configuration of the MigrationStrategy.
         """
 
     async def _map_to_target_validate_and_load(self, bo4e_datasets: list[IntermediateDataSet]) -> list[LoadingSummary]:
