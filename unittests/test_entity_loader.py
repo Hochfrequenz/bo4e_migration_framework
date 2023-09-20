@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Type
 
 import pytest
-from pydantic import BaseModel, RootModel, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, RootModel, TypeAdapter
 from typing_extensions import deprecated
 
 from bomf.loader.entityloader import (
@@ -119,8 +119,12 @@ class TestEntityLoader:
 
 
 class MyPydanticClass(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
     foo: str
-    bar: int
+    bar: int = Field(alias="bar")
+    test: str = Field(alias="random_foo_bar")
 
 
 class MyPydanticOnlyLoader(PydanticJsonFileEntityLoader[MyPydanticClass]):
@@ -138,7 +142,7 @@ class LegacyPydanticJsonFileEntityLoader(JsonFileEntityLoader[MyPydanticClass]):
         list_type_adapter = TypeAdapter(list[MyPydanticClass])
         super().__init__(
             file_path=file_path,
-            list_encoder=lambda x: list_type_adapter.dump_python(x),
+            list_encoder=lambda x: list_type_adapter.dump_python(x, by_alias=True),
         )
 
 
@@ -150,7 +154,9 @@ class TestPydanticJsonFileEntityLoader:
     async def test_dumping_to_file_via_load_entities(
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
-        my_entities = [MyPydanticClass(foo="asd", bar=x) for x in range(number_of_models)]
+        my_entities = [
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+        ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         await my_loader.load_entities(my_entities)
@@ -158,7 +164,7 @@ class TestPydanticJsonFileEntityLoader:
         with open(file_path, "r", encoding="utf-8") as infile:
             json_body = json.load(infile)
         assert len(json_body) == number_of_models
-        assert json_body == [{"foo": "asd", "bar": x} for x in range(number_of_models)]
+        assert json_body == [{"foo": "asd", "bar": x, "random_foo_bar": "test"} for x in range(number_of_models)]
 
     @pytest.mark.parametrize("number_of_models", [2, 20, 2000])
     @pytest.mark.parametrize(
@@ -167,7 +173,9 @@ class TestPydanticJsonFileEntityLoader:
     async def test_dumping_to_file_via_load_entity(
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
-        my_entities = [MyPydanticClass(foo="asd", bar=x) for x in range(number_of_models)]
+        my_entities = [
+            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+        ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
         loading_tasks = [my_loader.load_entity(x) for x in my_entities]
@@ -194,6 +202,8 @@ class TestPydanticJsonFileEntityLoader:
                 if load_multiple:
                     _ = await json_file_loader.load_entities([])
                 else:
-                    _ = await json_file_loader.load_entity(MyPydanticClass(foo="asd", bar=123))
+                    _ = await json_file_loader.load_entity(
+                        MyPydanticClass(foo="asd", bar=123, test="test")  # type:ignore[call-arg]
+                    )
         finally:
             json_file_path.unlink()

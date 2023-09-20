@@ -211,10 +211,10 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
                 existing_list.extend(entities)
                 json_file.seek(0)
                 json_file.truncate()
-                json_file.write(self._list_type_adapter.dump_json(existing_list, indent=2))
+                json_file.write(self._list_type_adapter.dump_json(existing_list, indent=2, by_alias=True))
         else:
             with open(self._file_path, "w+b") as json_file:
-                json_file.write(self._list_type_adapter.dump_json(entities, indent=2))
+                json_file.write(self._list_type_adapter.dump_json(entities, indent=2, by_alias=True))
 
         return [LoadingSummary(was_loaded_successfully=True)] * len(entities)
 
