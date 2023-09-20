@@ -143,7 +143,6 @@ class LegacyPydanticJsonFileEntityLoader(JsonFileEntityLoader[MyPydanticClass]):
         super().__init__(
             file_path=file_path,
             list_encoder=lambda x: list_type_adapter.dump_python(x, by_alias=True),
-
         )
 
 
