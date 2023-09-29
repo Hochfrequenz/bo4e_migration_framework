@@ -28,7 +28,7 @@ networkx==3.1
     #   pvframework
 pvframework==0.0.2
     # via -r requirements.in
-pydantic==2.4.1
+pydantic==2.4.2
     # via
     #   -r requirements.in
     #   bo4e
