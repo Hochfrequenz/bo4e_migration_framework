@@ -14,7 +14,7 @@ bidict==0.22.1
     #   pvframework
 bo4e==0.6.1
     # via -r requirements.in
-frozendict==2.3.10
+frozendict==2.4.0
     # via
     #   -r requirements.in
     #   pvframework
