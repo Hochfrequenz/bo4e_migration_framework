@@ -24,9 +24,8 @@ class TestSourceDataProvider:
         provider_under_test = LegacyDataSystemDataProvider()
         assert isinstance(await provider_under_test.get_data(), list)
 
-    @pytest.mark.datafiles("./unittests/example_source_data.json")
-    async def test_json_file_provider(self, datafiles):
-        file_path = datafiles / Path("example_source_data.json")
+    async def test_json_file_provider(self):
+        file_path = Path(__file__).parent / Path("example_source_data.json")
         example_json_data_provider = JsonFileSourceDataProvider(
             file_path,
             data_selector=lambda d: d["data"],  # type:ignore[call-overload]
