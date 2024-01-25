@@ -1,0 +1,8 @@
+{
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.cwd": "${workspaceFolder}/src",
+    "python.testing.pytestArgs": [
+        "${workspaceFolder}/unittests"
+    ],
+}
