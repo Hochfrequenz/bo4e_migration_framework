@@ -4,9 +4,8 @@ general data models for migrations
 import enum
 import uuid
 from abc import ABC
-from typing import TypeVar, Union
+from typing import TypeVar, Union, Any
 
-import attrs
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
@@ -25,8 +24,7 @@ Bo4eTyp = Union[_SpecificBusinessObject, _SpecificCom]  # pylint: disable=invali
 
 
 # pylint:disable=too-few-public-methods
-@attrs.define(kw_only=True, auto_attribs=True)
-class BusinessObjectRelation:
+class BusinessObjectRelation(BaseModel):
     """
     A business object relation describes the relation between two business object.
     E.g. a relation could have the type "has_melo" where relation_part_a is a bo4e.bo.Vertrag
@@ -36,7 +34,7 @@ class BusinessObjectRelation:
     necessary relation information.
     """
 
-    relation_type: enum.Enum = attrs.field()
+    relation_type: enum.Enum = Any
     """
     The relation type describes how two business objects relate to each other.
     This is not (only) about cardinality. It's about being able to model different relations between objects.
@@ -47,12 +45,12 @@ class BusinessObjectRelation:
     All these relation types are 1:1 relations between business partners and adresses, yet they all carry different
     meaning which we'd like to distinguish in our data.
     """
-    relation_part_a: Bo4eTyp = attrs.field()
+    relation_part_a: Bo4eTyp = Any
     """
     one Business Object or COM
     """
 
-    relation_part_b: Bo4eTyp = attrs.field()
+    relation_part_b: Bo4eTyp = Any
     """
     another Business Object or COM
     """

@@ -1,6 +1,6 @@
-from typing import Optional, Type
+from typing import Optional, Type, Any
 
-import attrs
+from pydantic import BaseModel
 import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
@@ -9,16 +9,15 @@ from bomf.mapper import Bo4eDataSetToTargetMapper, PaginationNotSupportedExcepti
 from bomf.model import Bo4eTyp
 
 
-class _NotImplementedBo4eDataSetMixin:
+class _NotImplementedBo4eDataSetMixin(BaseModel):
     """
     a mixin to inherit from if you'd like to have correct types but don't care about the logic
     """
 
 
-@attrs.define(kw_only=True, auto_attribs=True)
 class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
-    malo: Marktlokation = attrs.field()
-    melo: Messlokation = attrs.field()
+    malo: Marktlokation = Any
+    melo: Messlokation = Any
 
     def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         # pyling:disable=fixme
