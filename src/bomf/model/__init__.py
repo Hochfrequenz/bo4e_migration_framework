@@ -1,6 +1,7 @@
 """
 general data models for migrations
 """
+
 import enum
 import uuid
 from abc import ABC

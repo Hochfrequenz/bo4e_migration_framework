@@ -1,6 +1,7 @@
 """
 entity loaders load entities into the target system
 """
+
 import asyncio
 import json
 from abc import ABC, abstractmethod
@@ -14,46 +15,43 @@ from pydantic import BaseModel, TypeAdapter, field_validator, ValidationError  #
 
 _TargetEntity = TypeVar("_TargetEntity")
 
-type polling_task_type = Optional[Awaitable]
 
-#@attrs.define(auto_attribs=True, kw_only=True)
+# @attrs.define(auto_attribs=True, kw_only=True)
 class EntityLoadingResult(BaseModel):  # pylint:disable=too-few-public-methods
     """
     Information gathered while loading a _TargetEntity into the target system.
     """
 
     id_in_target_system: Optional[str]
-    #id_in_target_system: Optional[str] = attrs.field(
-    #    validator=attrs.validators.optional(attrs.validators.instance_of(str)), default=None
-    #)
+
     """
     the optional ID of the entity in the target system (e.g. if a new (GU)ID is generated upon loading)
     """
-    polling_task: polling_task_type
-    #polling_task: Optional[Awaitable] = attrs.field(default=None)
+    polling_task: Optional[Awaitable] = attrs.field(default=None)
     """
     If this task is awaited it means, that the target system is done with processing the request.
     A possible use case is that the target system responds with something like an event ID which can be used to poll
     an endpoint until it returns the expected result.
     """
-    @field_validator("polling_task")
-    def ensure_polling_task_to_be_awaitable_or_none(value: polling_task_type) -> polling_task_type:
-        """
-        Ensure that polling_task is either None or awaitable.
-        """
-        if value is not None and not polling_task_type:
-            raise ValueError("polling_task must be None or awaitable")
-        return value
 
     @field_validator("id_in_target_system")
-    def ensure_id_in_target_system_to_be_str_or_none(value: str) -> str:
+    def ensure_id_in_target_system_to_be_str_or_none(value: str) -> str:  # pylint:disable=no-self-argument
         """
         Ensure that id_in_target_system is either None or a string.
         """
         if value is not None and not isinstance(value, str):
             raise ValueError("id_in_target_system must be None or a string")
         return value
-    
+
+    @field_validator("polling_task")
+    def ensure_polling_task_to_be_awaitable_or_none(value: Awaitable) -> Awaitable:  # pylint:disable=no-self-argument
+        """
+        Ensure that polling_task is either None or an awaitable.
+        """
+        if value is not None and not Awaitable:
+            raise ValueError("polling_task must be None or an awaitable")
+        return value
+
 
 @attrs.define(auto_attribs=True, kw_only=True)
 class LoadingSummary(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-public-methods
