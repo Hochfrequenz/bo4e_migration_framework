@@ -1,4 +1,4 @@
-from typing import Optional, Type, Any
+from typing import Optional, Type
 
 from pydantic import BaseModel
 import pytest  # type:ignore[import]
@@ -16,8 +16,8 @@ class _NotImplementedBo4eDataSetMixin(BaseModel):
 
 
 class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
-    malo: Marktlokation = Any
-    melo: Messlokation = Any
+    malo: Marktlokation
+    melo: Messlokation
 
     def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         # pyling:disable=fixme

@@ -5,7 +5,7 @@ general data models for migrations
 import enum
 import uuid
 from abc import ABC
-from typing import TypeVar, Union, Any
+from typing import TypeVar, Union
 
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
@@ -35,7 +35,7 @@ class BusinessObjectRelation(BaseModel):
     necessary relation information.
     """
 
-    relation_type: enum.Enum = Any
+    relation_type: enum.Enum
     """
     The relation type describes how two business objects relate to each other.
     This is not (only) about cardinality. It's about being able to model different relations between objects.
@@ -46,12 +46,12 @@ class BusinessObjectRelation(BaseModel):
     All these relation types are 1:1 relations between business partners and adresses, yet they all carry different
     meaning which we'd like to distinguish in our data.
     """
-    relation_part_a: Bo4eTyp = Any
+    relation_part_a: Bo4eTyp
     """
     one Business Object or COM
     """
 
-    relation_part_b: Bo4eTyp = Any
+    relation_part_b: Bo4eTyp
     """
     another Business Object or COM
     """
