@@ -1,6 +1,7 @@
 """
 BOMF stands for BO4E Migration Framework.
 """
+
 import asyncio
 from abc import ABC
 from typing import Generic, Optional
@@ -52,9 +53,9 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         """
         a set of validation rules that are applied to the bo4e data sets
         """
-        self.bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[
-            TargetDataModel, IntermediateDataSet
-        ] = bo4e_to_target_mapper
+        self.bo4e_to_target_mapper: Bo4eDataSetToTargetMapper[TargetDataModel, IntermediateDataSet] = (
+            bo4e_to_target_mapper
+        )
         """
         a mapper that transforms bo4e data sets to a structure that suits the target system
         """
