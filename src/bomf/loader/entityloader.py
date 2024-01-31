@@ -40,7 +40,6 @@ class LoadingSummary(BaseModel, ABC, Generic[_TargetEntity]):  # pylint:disable=
     It is a summary that reports to calling code.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     was_loaded_successfully: bool
     """
