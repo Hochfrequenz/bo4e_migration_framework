@@ -1,6 +1,6 @@
 from typing import Optional, Type
 
-import attrs
+from pydantic import BaseModel
 import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
@@ -15,10 +15,9 @@ class _NotImplementedBo4eDataSetMixin:
     """
 
 
-@attrs.define(kw_only=True, auto_attribs=True)
-class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
-    malo: Marktlokation = attrs.field()
-    melo: Messlokation = attrs.field()
+class _MaLoAndMeLo(BaseModel, _NotImplementedBo4eDataSetMixin):
+    malo: Marktlokation
+    melo: Messlokation
 
     def get_business_object(self, bo_type: Type[Bo4eTyp], specification: Optional[str] = None) -> Bo4eTyp:
         # pyling:disable=fixme
