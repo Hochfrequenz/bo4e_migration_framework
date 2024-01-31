@@ -9,13 +9,13 @@ from bomf.mapper import Bo4eDataSetToTargetMapper, PaginationNotSupportedExcepti
 from bomf.model import Bo4eTyp
 
 
-class _NotImplementedBo4eDataSetMixin(BaseModel):
+class _NotImplementedBo4eDataSetMixin():
     """
     a mixin to inherit from if you'd like to have correct types but don't care about the logic
     """
 
 
-class _MaLoAndMeLo(_NotImplementedBo4eDataSetMixin):
+class _MaLoAndMeLo(BaseModel, _NotImplementedBo4eDataSetMixin):
     malo: Marktlokation
     melo: Messlokation
 

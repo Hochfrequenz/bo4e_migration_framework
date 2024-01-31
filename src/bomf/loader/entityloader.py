@@ -10,23 +10,23 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 from generics import get_filled_type
-from pydantic import BaseModel, TypeAdapter, ConfigDict, Field, ValidationError  # pylint:disable=no-name-in-module
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel, TypeAdapter, ConfigDict, ValidationError  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
 
-@dataclass(config=ConfigDict(arbitrary_types_allowed=True, validate_assignment=True))
-class EntityLoadingResult:  # pylint:disable=too-few-public-methods
+class EntityLoadingResult(BaseModel):  # pylint:disable=too-few-public-methods
     """
     Information gathered while loading a _TargetEntity into the target system.
     """
 
-    id_in_target_system: Optional[str]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id_in_target_system: Optional[str] = None
     """
     the optional ID of the entity in the target system (e.g. if a new (GU)ID is generated upon loading)
     """
-    polling_task: Optional[Awaitable]
+    polling_task: Optional[Awaitable] = None
     """
     If this task is awaited it means, that the target system is done with processing the request.
     A possible use case is that the target system responds with something like an event ID which can be used to poll
@@ -34,30 +34,31 @@ class EntityLoadingResult:  # pylint:disable=too-few-public-methods
     """
 
 
-@dataclass(config=ConfigDict(arbitrary_types_allowed=True, validate_assignment=True))
-class LoadingSummary(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-public-methods
+class LoadingSummary(BaseModel, ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-public-methods
     """
     Each instance of _TargetEntity that is loaded to the target system results in a LoadingSummary.
     It is a summary that reports to calling code.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     was_loaded_successfully: bool
     """
     true iff the instance has been loaded successfully
     """
-    loaded_at: Optional[datetime] = Field(default=None)
+    loaded_at: Optional[datetime] = None
     """
     point in time at which the loading (without verification) has completed; if not None
     """
-    verified_at: Optional[datetime] = Field(default=None)
+    verified_at: Optional[datetime] = None
     """
     point in time at which the loading of this entity has been verified (or None if not)
     """
-    id_in_target_system: Optional[str] = Field(default=None)
+    id_in_target_system: Optional[str] = None
     """
     the optional ID of the entity in the target system (e.g. if a new (GU)ID is generated upon loading)
     """
-    loading_error: Optional[Exception] = Field(default=None)
+    loading_error: Optional[Exception] = None
 
 
 class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-public-methods
