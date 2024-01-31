@@ -1,6 +1,7 @@
 """
 Tests the overall data flow using bomf.
 """
+
 from datetime import UTC, datetime
 from typing import Optional
 from unittest.mock import Mock

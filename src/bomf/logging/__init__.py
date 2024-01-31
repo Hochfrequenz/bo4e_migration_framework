@@ -2,6 +2,7 @@
 Sets up the logging for the bomf package. The logger is stored inside a ContextVar to support concurrent processing
 in e.g. web services.
 """
+
 import logging
 from contextvars import ContextVar, Token
 from typing import Callable
