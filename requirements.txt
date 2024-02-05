@@ -26,11 +26,11 @@ networkx==3.2.1
     #   pvframework
 pvframework==0.0.8
     # via -r requirements.in
-pydantic==2.6.0
+pydantic==2.6.1
     # via
     #   -r requirements.in
     #   bo4e
-pydantic-core==2.16.1
+pydantic-core==2.16.2
     # via pydantic
 pyhumps==3.8.0
     # via bo4e
