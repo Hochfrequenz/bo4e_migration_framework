@@ -1,12 +1,13 @@
 from typing import Optional, Type
 
-from pydantic import BaseModel
 import pytest  # type:ignore[import]
 from bo4e.bo.marktlokation import Marktlokation
 from bo4e.bo.messlokation import Messlokation
+from pydantic import BaseModel
 
 from bomf.mapper import Bo4eDataSetToTargetMapper, PaginationNotSupportedException, SourceToBo4eDataSetMapper
-from bomf.model import Bo4eTyp
+
+from .models import Bo4eTyp
 
 
 class _NotImplementedBo4eDataSetMixin:

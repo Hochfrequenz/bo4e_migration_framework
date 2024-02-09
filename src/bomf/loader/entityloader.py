@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Generic, Optional, TypeVar
 
 from generics import get_filled_type
-from pydantic import BaseModel, TypeAdapter, ConfigDict, ValidationError  # pylint:disable=no-name-in-module
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError  # pylint:disable=no-name-in-module
 
 _TargetEntity = TypeVar("_TargetEntity")
 
