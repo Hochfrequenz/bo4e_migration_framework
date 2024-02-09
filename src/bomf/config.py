@@ -4,7 +4,7 @@ This module provides a class to hold configuration values for the `MigrationStra
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, field_validator
 
 
 class MigrationConfig(BaseModel):
@@ -16,7 +16,7 @@ class MigrationConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    migration_key_date: datetime
+    migration_key_date: AwareDatetime
     """
     Global key date for the migration.
     This should be used if a class/method needs the migration date as a key date.
