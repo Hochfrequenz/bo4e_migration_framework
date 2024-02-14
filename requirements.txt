@@ -6,7 +6,7 @@
 #
 annotated-types==0.5.0
     # via pydantic
-bidict==0.22.1
+bidict==0.23.0
     # via
     #   -r requirements.in
     #   pvframework
