@@ -7,6 +7,7 @@ from typing import TypeVar, Union
 
 from bo4e.bo.geschaeftsobjekt import Geschaeftsobjekt
 from bo4e.com.com import COM
+from pydantic import BaseModel
 
 _SpecificBusinessObject = TypeVar("_SpecificBusinessObject", bound=Geschaeftsobjekt)
 """
