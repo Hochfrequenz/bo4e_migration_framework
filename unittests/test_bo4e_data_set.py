@@ -5,7 +5,9 @@ import pytest  # type:ignore[import]
 from bo4e.bo.geschaeftspartner import Geschaeftspartner
 from bo4e.com.adresse import Adresse
 
-from bomf.model import Bo4eDataSet, Bo4eTyp, BusinessObjectRelation
+from bomf.model import Bo4eDataSet
+
+from .models import Bo4eTyp, BusinessObjectRelation
 
 
 class _GeschaeftspartnerAdresseRelation(enum.Enum):
