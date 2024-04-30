@@ -6,7 +6,7 @@
 #
 annotated-types==0.6.0
     # via pydantic
-bo4e==202401.1.0
+bo4e==202401.1.1
     # via -r dev_requirements/requirements-tests.in
 iniconfig==2.0.0
     # via pytest
