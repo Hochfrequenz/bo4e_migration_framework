@@ -16,9 +16,9 @@ packaging==23.2
     # via pytest
 pluggy==1.5.0
     # via pytest
-pydantic==2.7.2
+pydantic==2.7.3
     # via bo4e
-pydantic-core==2.18.3
+pydantic-core==2.18.4
     # via pydantic
 pyhumps==3.8.0
     # via bo4e
