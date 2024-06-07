@@ -172,7 +172,7 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
             with open(self._file_path, "w+", encoding="utf-8") as outfile:
                 json.dump(new_content, outfile, ensure_ascii=False, indent=2)
 
-        return [LoadingSummary(was_loaded_successfully=True, loaded_at=datetime.utcnow())] * len(entities)
+        return [LoadingSummary(was_loaded_successfully=True, loaded_at=datetime.utcnow())] * len(new_content)
 
 
 _PydanticTargetModel = TypeVar("_PydanticTargetModel", bound=BaseModel)
