@@ -22,7 +22,7 @@ pydantic-core==2.20.1
     # via pydantic
 pyhumps==3.8.0
     # via bo4e
-pytest==8.2.2
+pytest==8.3.1
     # via
     #   -r dev_requirements/requirements-tests.in
     #   pytest-asyncio
