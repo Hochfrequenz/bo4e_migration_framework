@@ -26,7 +26,7 @@ pydantic==2.8.2
     # via -r requirements.in
 pydantic-core==2.20.1
     # via pydantic
-python-generics==0.0.4
+python-generics==0.1.0
     # via -r requirements.in
 typeguard==4.1.5
     # via
