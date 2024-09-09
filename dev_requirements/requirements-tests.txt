@@ -16,9 +16,9 @@ packaging==23.2
     # via pytest
 pluggy==1.5.0
     # via pytest
-pydantic==2.9.0
+pydantic==2.9.1
     # via bo4e
-pydantic-core==2.23.2
+pydantic-core==2.23.3
     # via pydantic
 pyhumps==3.8.0
     # via bo4e
@@ -32,5 +32,3 @@ typing-extensions==4.9.0
     # via
     #   pydantic
     #   pydantic-core
-tzdata==2024.1
-    # via pydantic
