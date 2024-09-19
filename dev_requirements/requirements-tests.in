@@ -1,5 +1,0 @@
-pytest
-pytest-asyncio
-bo4e==202401.2.1
-# we're using this pinned version of bo4e because there's no version which contains this fix:
-# https://github.com/bo4e/BO4E-python/commit/3fd45539edd7d5bfdca990775244bf31007a5ca7

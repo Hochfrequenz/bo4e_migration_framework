@@ -21,7 +21,7 @@ The framework
 - enforces users to adapt to structured and consistent patterns
 - and by doing so will lead to higher chances for maintainable and reusable code.
 
-## Architeture / Overview
+## Architecture / Overview
 The overall setup for a migration from 1-n source systems (A, B, C...) to 1-m target systems (1,2, 3...) might look like this:
 
 ```mermaid

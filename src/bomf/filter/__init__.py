@@ -108,7 +108,7 @@ CandidateProperty = TypeVar("CandidateProperty")
 
 class HardcodedFilter(Filter[Candidate], ABC, Generic[Candidate, CandidateProperty]):
     """
-    a harcoded filter filters on a hardcoded list of allowed/blocked values (formerly known as white- and blacklist)
+    a hardcoded filter filters on a hardcoded list of allowed/blocked values (formerly known as white- and blacklist)
     """
 
     def __init__(self, criteria_selector: Callable[[Candidate], CandidateProperty], values: set[CandidateProperty]):
