@@ -16,7 +16,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = []     # add all the dependencies here
+dependencies = [
+    "pydantic>=2.0.0",
+    "typeguard",
+    "frozendict",
+    "bidict",
+    "networkx",
+    "injector",
+    "python-generics",
+    "pvframework"
+]     # add all the dependencies here
 dynamic = ["readme", "version"]
 
 [project.optional-dependencies]
