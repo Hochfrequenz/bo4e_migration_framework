@@ -1,6 +1,6 @@
 [project]
 name = "bomf"
-description = "Description of your package"
+description = "The bomf Repo is a framework, that allows its users to migrate data"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [{ name = "Leon Haffmans", email = "leon.haffmans@hochfrequenz.de" }]
@@ -53,8 +53,8 @@ dev = [
 
 
 [project.urls]
-Changelog = "https://github.com/Hochfrequenz/python_template_repository/releases"
-Homepage = "https://github.com/Hochfrequenz/python_template_repository"
+Changelog = "https://github.com/Hochfrequenz/bo4e_migration_framework/releases"
+Homepage = "https://github.com/Hochfrequenz/bo4e_migration_framework"
 
 [tool.black]
 line-length = 120
