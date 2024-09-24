@@ -103,7 +103,7 @@ fragments = [{ path = "README.md" }]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/_your_package_version.py"
+version-file = "src/_bomf_version.py"
 template = '''
 version = "{version}"
 '''
