@@ -41,7 +41,7 @@ class BusinessObjectRelation(BaseModel):
     - the address is the residential address of the business partner
     - the address is the invoice address of the business partner
     - the address is the place where the business partner was born
-    All these relation types are 1:1 relations between business partners and adresses, yet they all carry different
+    All these relation types are 1:1 relations between business partners and addresses, yet they all carry different
     meaning which we'd like to distinguish in our data.
     """
     relation_part_a: Bo4eTyp
