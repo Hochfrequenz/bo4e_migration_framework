@@ -20,7 +20,7 @@ networkx==3.3
     # via
     #   -r requirements.in
     #   pvframework
-pvframework==0.0.8
+pvframework==0.1.2
     # via -r requirements.in
 pydantic==2.9.2
     # via -r requirements.in
