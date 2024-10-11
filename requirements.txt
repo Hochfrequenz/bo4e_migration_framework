@@ -16,7 +16,7 @@ frozendict==2.4.5
     #   pvframework
 injector==0.22.0
     # via -r requirements.in
-networkx==3.4
+networkx==3.4.1
     # via
     #   -r requirements.in
     #   pvframework
