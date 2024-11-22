@@ -22,9 +22,9 @@ networkx==3.4.2
     #   pvframework
 pvframework==0.1.2
     # via -r requirements.in
-pydantic==2.10.0
+pydantic==2.10.1
     # via -r requirements.in
-pydantic-core==2.27.0
+pydantic-core==2.27.1
     # via pydantic
 python-generics==0.2.3
     # via -r requirements.in
