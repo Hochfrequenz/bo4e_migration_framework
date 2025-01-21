@@ -43,7 +43,7 @@ type_check = [
     "types-frozendict==2.0.9"
 ]
 spellcheck = [
-    "codespell==2.3.0"
+    "codespell==2.4.0"
 ]
 coverage = [
     "coverage==7.6.10"
