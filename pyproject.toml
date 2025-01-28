@@ -31,7 +31,7 @@ dynamic = ["readme", "version"]
 [project.optional-dependencies]
 tests = [
     "pytest==8.3.4",
-    "pytest-asyncio==0.25.2",
+    "pytest-asyncio==0.25.3",
     "bo4e==202401.2.1"
 ]
 linting = [
