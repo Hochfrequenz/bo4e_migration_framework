@@ -46,7 +46,7 @@ spellcheck = [
     "codespell==2.4.1"
 ]
 coverage = [
-    "coverage==7.6.10"
+    "coverage==7.6.11"
 ]
 formatting = [
     "black==25.1.0",
