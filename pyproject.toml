@@ -32,7 +32,7 @@ dynamic = ["readme", "version"]
 tests = [
     "pytest==8.3.5",
     "pytest-asyncio==0.25.3",
-    "bo4e==202401.5.0"
+    "bo4e==202401.6.0"
 ]
 linting = [
     "pylint==3.2.7"
