@@ -22,9 +22,9 @@ networkx==3.4.2
     #   pvframework
 pvframework==0.1.2
     # via -r requirements.in
-pydantic==2.10.6
+pydantic==2.11.1
     # via -r requirements.in
-pydantic-core==2.27.2
+pydantic-core==2.33.0
     # via pydantic
 python-generics==0.2.3
     # via -r requirements.in
@@ -37,3 +37,6 @@ typing-extensions==4.12.2
     #   pydantic
     #   pydantic-core
     #   typeguard
+    #   typing-inspection
+typing-inspection==0.4.0
+    # via pydantic
