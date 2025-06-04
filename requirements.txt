@@ -28,11 +28,11 @@ pydantic-core==2.33.2
     # via pydantic
 python-generics==0.2.3
     # via -r requirements.in
-typeguard==4.4.2
+typeguard==4.4.3
     # via
     #   -r requirements.in
     #   pvframework
-typing-extensions==4.12.2
+typing-extensions==4.14.0
     # via
     #   pydantic
     #   pydantic-core
