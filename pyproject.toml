@@ -30,7 +30,7 @@ dynamic = ["readme", "version"]
 
 [project.optional-dependencies]
 tests = [
-    "pytest==8.4.1",
+    "pytest==8.4.2",
     "pytest-asyncio==1.2.0",
     "bo4e==202501.0.0"
 ]
