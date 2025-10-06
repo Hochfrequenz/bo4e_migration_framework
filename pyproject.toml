@@ -35,7 +35,7 @@ tests = [
     "bo4e==202501.0.0"
 ]
 linting = [
-    "pylint==3.2.7"
+    "pylint==3.3.9"
 ]
 type_check = [
     "mypy==1.18.1",
