@@ -10,7 +10,7 @@ bidict==0.23.1
     # via
     #   -r requirements.in
     #   pvframework
-frozendict==2.4.6
+frozendict==2.4.7
     # via
     #   -r requirements.in
     #   pvframework
