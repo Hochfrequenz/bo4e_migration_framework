@@ -50,7 +50,7 @@ coverage = [
 ]
 formatting = [
     "black==25.12.0",
-    "isort==8.0.0"
+    "isort==8.0.1"
 ]
 test_packaging = [
     "build==1.4.0",
