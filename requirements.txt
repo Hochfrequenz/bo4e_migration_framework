@@ -28,7 +28,7 @@ pydantic-core==2.46.4
     # via pydantic
 python-generics==0.2.4
     # via -r requirements.in
-typeguard==4.5.1
+typeguard==4.5.2
     # via
     #   -r requirements.in
     #   pvframework
