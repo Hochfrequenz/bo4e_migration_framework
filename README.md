@@ -17,7 +17,7 @@ bomf is a framework, that allows its users to migrate data
 - and finally create records in target systems (aka "loading").
 
 The framework
-- encourages user to program consistent data processing pipelines from any source to any target system 
+- encourages user to program consistent data processing pipelines from any source to any target system
 - enforces users to adapt to structured and consistent patterns
 - and by doing so will lead to higher chances for maintainable and reusable code.
 
@@ -52,7 +52,7 @@ graph TD
     A2{Source Data 2} -->|Export| B2(All source data 2 extracts)
     B2 -->C2[Filter on source data 2 model aka Pre-Select 2]
     C1 -->|do not match filter predicate| Z{discarded data}
-    C1 -->|match filter criteria| M(Custom Logic: SourceDataSetToBo4EDataSetMapper) 
+    C1 -->|match filter criteria| M(Custom Logic: SourceDataSetToBo4EDataSetMapper)
     C2 -->|do not match filter predicate| Z
     C2 -->|match filter criteria| M
     M -->|mapping| E(BO4E Data Sets)
@@ -82,7 +82,7 @@ graph TD
 ## How to use this Repository on Your Machine (Development)
 
 Please follow the [instructions in our Python Template Repository](https://github.com/Hochfrequenz/python_template_repository).
-tl;dr: `tox`.
+tl;dr: `uv sync --group dev`.
 
 ## Contribute
 
