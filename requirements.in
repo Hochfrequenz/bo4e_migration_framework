@@ -1,8 +1,0 @@
-pydantic>=2.0.0
-typeguard
-frozendict
-bidict
-networkx
-injector
-python-generics
-pvframework

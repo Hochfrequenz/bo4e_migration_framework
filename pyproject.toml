@@ -28,7 +28,11 @@ dependencies = [
 ]     # add all the dependencies here
 dynamic = ["readme", "version"]
 
-[project.optional-dependencies]
+[project.urls]
+Changelog = "https://github.com/Hochfrequenz/bo4e_migration_framework/releases"
+Homepage = "https://github.com/Hochfrequenz/bo4e_migration_framework"
+
+[dependency-groups]
 tests = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
@@ -40,30 +44,31 @@ linting = [
 type_check = [
     "mypy==2.3.0",
     "networkx-stubs==0.0.1",
-    "types-frozendict==2.0.9"
+    "types-frozendict==2.0.9",
+    {include-group = "tests"}
 ]
 spellcheck = [
     "codespell==2.4.3"
 ]
 coverage = [
-    "coverage==7.15.2"
+    "coverage==7.15.2",
+    {include-group = "tests"}
 ]
 formatting = [
     "black==25.12.0",
     "isort==8.0.1"
 ]
-test_packaging = [
-    "build==1.5.1",
-    "twine==6.2.0"
-]
 dev = [
-    "pip-tools"
+    {include-group = "tests"},
+    {include-group = "linting"},
+    {include-group = "type_check"},
+    {include-group = "coverage"},
+    {include-group = "formatting"},
+    "pre-commit"
 ]
 
-
-[project.urls]
-Changelog = "https://github.com/Hochfrequenz/bo4e_migration_framework/releases"
-Homepage = "https://github.com/Hochfrequenz/bo4e_migration_framework"
+[tool.uv]
+default-groups = []
 
 [tool.black]
 line-length = 120
