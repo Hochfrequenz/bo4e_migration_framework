@@ -879,11 +879,11 @@ wheels = [
 
 [[package]]
 name = "python-generics"
-version = "0.2.4"
+version = "0.2.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b5/04/f9297d0da5a68565549cf60ab2c9523dd664fd3715778b09b77ff6d323de/python_generics-0.2.4.tar.gz", hash = "sha256:9243a269ef325552efb193f83eefe0431edbce78514cca0c8b4f1d57a2c31b20", size = 12770, upload-time = "2025-11-04T18:39:59.82Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/a3/7609d7121bb3d4b5e513e74469413bb9b78979600ee5f1d3fea3695806ce/python_generics-0.2.5.tar.gz", hash = "sha256:27c9fdb4a437654051ab1d2dfd3d46431b1bba28d5685e5ccbbd5737e7109bc9", size = 72548, upload-time = "2026-07-27T10:25:32.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/59/fabba6cc1d196ab650691bbf83882cc28665868819a294a2025926bddbc6/python_generics-0.2.4-py3-none-any.whl", hash = "sha256:c0d4bad282223a1ae9034c8988eb9730dfa08978c2b569c175dfa83d60ee088a", size = 7318, upload-time = "2025-11-04T18:39:58.48Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/a8/418c7272ce930641af86af91462009d3744e9a604cd307b7728cd9dc98fb/python_generics-0.2.5-py3-none-any.whl", hash = "sha256:dbf34e31bc18afb369d92632d267b65d9f0bf85403f57c2dd68def673db21cdb", size = 7125, upload-time = "2026-07-27T10:25:30.785Z" },
 ]
 
 [[package]]
