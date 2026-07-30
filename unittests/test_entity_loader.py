@@ -155,7 +155,8 @@ class TestPydanticJsonFileEntityLoader:
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
         my_entities = [
-            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+            MyPydanticClass(foo="asd", bar=x, test="test")
+            for x in range(number_of_models)  # type:ignore[call-arg]
         ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]
@@ -174,7 +175,8 @@ class TestPydanticJsonFileEntityLoader:
         self, number_of_models: int, loader_class: Type[EntityLoader[MyPydanticClass]], tmp_path
     ):
         my_entities = [
-            MyPydanticClass(foo="asd", bar=x, test="test") for x in range(number_of_models)  # type:ignore[call-arg]
+            MyPydanticClass(foo="asd", bar=x, test="test")
+            for x in range(number_of_models)  # type:ignore[call-arg]
         ]
         file_path = Path(tmp_path) / Path("foo.json")
         my_loader = loader_class(file_path)  # type:ignore[call-arg]

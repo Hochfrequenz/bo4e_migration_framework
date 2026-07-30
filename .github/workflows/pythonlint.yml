@@ -24,7 +24,7 @@ jobs:
       - name: Run linting
         if: matrix.linter-env == 'linting'
         run: |
-          uv run --group linting pylint bomf
+          uv run --group lint ruff check src/bomf
       - name: Run type_check
         if: matrix.linter-env == 'type_check'
         run: |

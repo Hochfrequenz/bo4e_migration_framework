@@ -5,8 +5,8 @@ mappers convert from source data model to BO4E and from BO4E to a target data mo
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import Awaitable, Generic, Optional, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Generic, TypeVar
 
 from bomf.model import Bo4eDataSet
 
@@ -22,7 +22,7 @@ It is based on BO4E.
 """
 
 
-class PaginationNotSupportedException(NotImplementedError):
+class PaginationNotSupportedException(NotImplementedError):  # noqa: N818 -- renaming is a breaking public API change
     """
     an exception that indicates, that paginating the data sets is not support at the moment
     """
@@ -38,9 +38,7 @@ class SourceToBo4eDataSetMapper(ABC, Generic[IntermediateDataSet]):
     # the only thing it has to provide is a method to create_data_sets (in bo4e).
     # we don't care from where it gets them in the first place
 
-    async def create_data_sets(
-        self, offset: Optional[int] = None, limit: Optional[int] = None
-    ) -> list[IntermediateDataSet]:
+    async def create_data_sets(self, offset: int | None = None, limit: int | None = None) -> list[IntermediateDataSet]:
         """
         Apply the mapping to all the provided source data sets.
         If an offset and limit are provided (not None), then the implementing method should
@@ -86,7 +84,7 @@ def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catch
     This function does the overhead for you.
     """
 
-    async def _call(single: _Source) -> Optional[_Target]:
+    async def _call(single: _Source) -> _Target | None:
         try:
             return await map_single(single)
         except Exception as error:  # pylint:disable=broad-exception-caught
@@ -97,7 +95,7 @@ def convert_single_mapping_task_into_list_mapping_task_with_single_pokemon_catch
             return None
 
     async def result_func(multiple: list[_Source]) -> list[_Target]:
-        tasks: list[Awaitable[Optional[_Target]]] = [_call(x) for x in multiple]
+        tasks: list[Awaitable[_Target | None]] = [_call(x) for x in multiple]
         results = [x for x in await asyncio.gather(*tasks) if x is not None]
         return results
 
@@ -115,7 +113,7 @@ def convert_single_mapping_into_list_mapping_with_single_pokemon_catchers(
     This function does the overhead for you.
     """
 
-    def _call(single: _Source) -> Optional[_Target]:
+    def _call(single: _Source) -> _Target | None:
         try:
             return map_single(single)
         except Exception as error:  # pylint:disable=broad-exception-caught
@@ -126,7 +124,7 @@ def convert_single_mapping_into_list_mapping_with_single_pokemon_catchers(
             return None
 
     def result_func(multiple: list[_Source]) -> list[_Target]:
-        results_and_nones: list[Optional[_Target]] = [_call(x) for x in multiple]
+        results_and_nones: list[_Target | None] = [_call(x) for x in multiple]
         results = [x for x in results_and_nones if x is not None]
         return results
 

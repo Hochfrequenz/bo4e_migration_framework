@@ -4,13 +4,13 @@ BOMF stands for BO4E Migration Framework.
 
 import asyncio
 from abc import ABC
-from typing import Generic, Optional
+from typing import Generic
 
 from injector import inject
 from pvframework import ValidationManager
 
 from bomf.config import MigrationConfig
-from bomf.filter import Filter
+from bomf.filter import Filter as Filter
 from bomf.loader.entityloader import EntityLoader, LoadingSummary
 from bomf.logging import logger
 from bomf.mapper import (
@@ -20,7 +20,8 @@ from bomf.mapper import (
     SourceToBo4eDataSetMapper,
     TargetDataModel,
 )
-from bomf.provider import KeyTyp, SourceDataProvider
+from bomf.provider import KeyTyp as KeyTyp
+from bomf.provider import SourceDataProvider as SourceDataProvider
 
 
 # pylint:disable=too-few-public-methods
@@ -43,13 +44,13 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         bo4e_to_target_mapper: Bo4eDataSetToTargetMapper,
         target_loader: EntityLoader,
         config: MigrationConfig,
-        validation_manager: Optional[ValidationManager] = None,
+        validation_manager: ValidationManager | None = None,
     ):
         self.source_data_to_bo4e_mapper: SourceToBo4eDataSetMapper[IntermediateDataSet] = source_data_to_bo4e_mapper
         """
         A mapper that transforms source data models into data sets that consist of bo4e objects
         """
-        self.validation_manager: Optional[ValidationManager[IntermediateDataSet]] = validation_manager
+        self.validation_manager: ValidationManager[IntermediateDataSet] | None = validation_manager
         """
         a set of validation rules that are applied to the bo4e data sets
         """
@@ -115,7 +116,7 @@ class MigrationStrategy(ABC, Generic[IntermediateDataSet, TargetDataModel]):
         return loading_summaries
 
     async def migrate_paginated(
-        self, chunk_size: int, initial_offset: int = 0, upper_bound: Optional[int] = None
+        self, chunk_size: int, initial_offset: int = 0, upper_bound: int | None = None
     ) -> list[LoadingSummary]:
         """
         This is similar to migrate, but it loads the data in chunks of chunk_size.

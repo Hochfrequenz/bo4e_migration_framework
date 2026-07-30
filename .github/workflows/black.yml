@@ -7,6 +7,13 @@ on:
   pull_request:
 
 jobs:
+  # This job is intentionally still called "black" (workflow name, job id, and
+  # required status check "black (3.12, ubuntu-latest)" on the branch protection
+  # rules are all unchanged) even though it now runs `ruff format --check` instead
+  # of black. Renaming any of these would leave the required check permanently
+  # pending on future PRs; renaming requires updating the required-check list in
+  # the repo's branch protection settings in the same change, which is an
+  # admin-level, org-visible action and out of scope for this tooling swap.
   black:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -19,6 +26,6 @@ jobs:
         uses: astral-sh/setup-uv@v9.0.0
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Black Code Formatter
+      - name: Ruff Format Check
         run: |
-          uv run --group formatting black . --check
+          uv run --group lint ruff format --check .

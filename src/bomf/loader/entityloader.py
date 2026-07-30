@@ -5,9 +5,10 @@ entity loaders load entities into the target system
 import asyncio
 import json
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Awaitable, Callable, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from generics import get_filled_type
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError  # pylint:disable=no-name-in-module
@@ -22,11 +23,11 @@ class EntityLoadingResult(BaseModel):  # pylint:disable=too-few-public-methods
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    id_in_target_system: Optional[str] = None
+    id_in_target_system: str | None = None
     """
     the optional ID of the entity in the target system (e.g. if a new (GU)ID is generated upon loading)
     """
-    polling_task: Optional[Awaitable] = None
+    polling_task: Awaitable | None = None
     """
     If this task is awaited it means, that the target system is done with processing the request.
     A possible use case is that the target system responds with something like an event ID which can be used to poll
@@ -46,19 +47,19 @@ class LoadingSummary(BaseModel, ABC, Generic[_TargetEntity]):  # pylint:disable=
     """
     true iff the instance has been loaded successfully
     """
-    loaded_at: Optional[datetime] = None
+    loaded_at: datetime | None = None
     """
     point in time at which the loading (without verification) has completed; if not None
     """
-    verified_at: Optional[datetime] = None
+    verified_at: datetime | None = None
     """
     point in time at which the loading of this entity has been verified (or None if not)
     """
-    id_in_target_system: Optional[str] = None
+    id_in_target_system: str | None = None
     """
     the optional ID of the entity in the target system (e.g. if a new (GU)ID is generated upon loading)
     """
-    loading_error: Optional[Exception] = None
+    loading_error: Exception | None = None
 
 
 class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-public-methods
@@ -68,7 +69,7 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
     """
 
     @abstractmethod
-    async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
+    async def load_entity(self, entity: _TargetEntity) -> EntityLoadingResult | None:
         """
         Load the given entity into the target system.
         This method shall contain the code that accesses the target system.
@@ -77,7 +78,7 @@ class EntityLoader(ABC, Generic[_TargetEntity]):  # pylint:disable=too-few-publi
         """
 
     @abstractmethod
-    async def verify(self, entity: _TargetEntity, id_in_target_system: Optional[str] = None) -> bool:
+    async def verify(self, entity: _TargetEntity, id_in_target_system: str | None = None) -> bool:
         """
         Verify that the given entity has been successfully loaded into the target system.
         Returns true iff the target system knows the given entity (meaning: the loading was successful).
@@ -146,7 +147,7 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
     an entity loader that produces a json file as result. This is specifically useful in unit tests
     """
 
-    async def verify(self, entity: _TargetEntity, id_in_target_system: Optional[str] = None) -> bool:
+    async def verify(self, entity: _TargetEntity, id_in_target_system: str | None = None) -> bool:
         return True
 
     def __init__(self, file_path: Path, list_encoder: Callable[[list[_TargetEntity]], list[dict]]):
@@ -154,7 +155,7 @@ class JsonFileEntityLoader(EntityLoader[_TargetEntity], Generic[_TargetEntity]):
         self._file_path = file_path
         self._list_encoder = list_encoder
 
-    async def load_entity(self, entity: _TargetEntity) -> Optional[EntityLoadingResult]:
+    async def load_entity(self, entity: _TargetEntity) -> EntityLoadingResult | None:
         await self.load_entities([entity])
         return None
 
@@ -191,7 +192,7 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
             list[self._model]  # type:ignore[name-defined]
         )
 
-    async def load_entity(self, entity: _PydanticTargetModel) -> Optional[EntityLoadingResult]:
+    async def load_entity(self, entity: _PydanticTargetModel) -> EntityLoadingResult | None:
         await self.load_entities([entity])
         return None
 
@@ -212,5 +213,5 @@ class PydanticJsonFileEntityLoader(EntityLoader[_PydanticTargetModel], Generic[_
 
         return [LoadingSummary(was_loaded_successfully=True)] * len(entities)
 
-    async def verify(self, entity: _PydanticTargetModel, id_in_target_system: Optional[str] = None) -> bool:
+    async def verify(self, entity: _PydanticTargetModel, id_in_target_system: str | None = None) -> bool:
         return True
