@@ -5,9 +5,9 @@ filters can be used to consider only those objects for a migration that meet cer
 # pylint:disable=too-few-public-methods
 
 import asyncio
-import logging
 from abc import ABC, abstractmethod
-from typing import Awaitable, Callable, Generic, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Generic, TypeVar
 
 from bomf.logging import logger
 

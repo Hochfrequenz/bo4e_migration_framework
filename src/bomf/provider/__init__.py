@@ -3,11 +3,11 @@ providers provide data
 """
 
 import json
-import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Mapping
 from itertools import groupby
 from pathlib import Path
-from typing import Callable, Generic, Mapping, TypeVar, Union
+from typing import Generic, TypeVar
 
 from bomf import PaginationNotSupportedException
 from bomf.logging import logger
@@ -100,7 +100,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
     def __init__(
         self,
         json_file_path: Path,
-        data_selector: Callable[[Union[dict, list]], list[SourceDataModel]],
+        data_selector: Callable[[dict | list], list[SourceDataModel]],
         key_selector: Callable[[SourceDataModel], KeyTyp],
         encoding="utf-8",
     ):
@@ -108,7 +108,7 @@ class JsonFileSourceDataProvider(SourceDataProvider[SourceDataModel, KeyTyp], Ge
         initialize by providing a filepath to the json file and an accessor that describes the position of the data
         within the file.
         """
-        with open(json_file_path, "r", encoding=encoding) as json_file:
+        with open(json_file_path, encoding=encoding) as json_file:
             raw_data = json.load(json_file)
         self._source_data_models: list[SourceDataModel] = data_selector(raw_data)
         self._key_to_data_model_mapping: Mapping[KeyTyp, SourceDataModel] = {

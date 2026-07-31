@@ -2,7 +2,8 @@
 Source Data Provider Filters combine the features of a filter with the features of a Source Data Provider.
 """
 
-from typing import Callable, Generic, Literal, Optional, overload
+from collections.abc import Callable
+from typing import Generic, Literal, overload
 
 from bomf import KeyTyp, SourceDataProvider
 from bomf.filter import Candidate, Filter
@@ -59,7 +60,7 @@ class SourceDataProviderFilter(Generic[Candidate, KeyTyp]):
     async def apply(
         self,
         source_data_provider: SourceDataProvider[Candidate, KeyTyp],
-        key_selector: Optional[Callable[[Candidate], KeyTyp]] = None,
+        key_selector: Callable[[Candidate], KeyTyp] | None = None,
     ) -> SourceDataProvider[Candidate, KeyTyp]:
         """
         Reads all the data from the given source_data_provider, applies the filtering, then returns a new source

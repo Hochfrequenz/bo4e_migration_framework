@@ -4,10 +4,13 @@ in e.g. web services.
 """
 
 import logging
-from contextvars import ContextVar, Token
-from typing import Callable
+from collections.abc import Callable
+from contextvars import ContextVar
 
-logger: ContextVar[logging.Logger] = ContextVar("logger", default=logging.getLogger("bomf-unbound"))
+logger: ContextVar[logging.Logger] = ContextVar(
+    "logger",
+    default=logging.getLogger("bomf-unbound"),  # noqa: B039 -- shared logger default is intentional
+)
 
 
 def initialize_logger(context_specific_logger: logging.Logger) -> Callable[[], None]:
