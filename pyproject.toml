@@ -48,7 +48,7 @@ spellcheck = [
     "codespell==2.4.3"
 ]
 coverage = [
-    "coverage==7.15.2",
+    "coverage==7.15.3",
     {include-group = "tests"}
 ]
 lint = [
