@@ -52,7 +52,7 @@ coverage = [
     {include-group = "tests"}
 ]
 lint = [
-    "ruff==0.16.1"
+    "ruff==0.16.2"
 ]
 dev = [
     {include-group = "tests"},
