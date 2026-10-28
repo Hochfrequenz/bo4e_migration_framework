@@ -35,7 +35,7 @@ Homepage = "https://github.com/Hochfrequenz/bo4e_migration_framework"
 [dependency-groups]
 tests = [
     "pytest==9.1.1",
-    "pytest-asyncio==1.4.0",
+    "pytest-asyncio==1.4.1",
     "bo4e==202607.1.0"
 ]
 type_check = [
